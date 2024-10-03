@@ -27,7 +27,7 @@ formato do movimento: [(ind. final linha - ind. inicial linha) , (ind. final col
 ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimento deve ser [0,1]
 
 cada peça tem uma lista de movimentos possíveis
-ex: rei , pode se mover 1 casa em qualquer direção, logo sua lista de movimentos possíveis inicial é [[0,1], [-1,0], [1,0], [-1,0], [1,-1], [1,1], [-1,1], [-1,-1]]
+ex: rei , pode se mover 1 casa em qualquer direção, logo sua lista de movimentos possíveis inicial é [[0,1], [0,-1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
 
 regras adicionais de movimento: primeiro movimento do peão, roque, grande roque, en passant
 
@@ -75,6 +75,7 @@ def movimento_basico(matriz, peca_movida, lista_mov):
   matriz[linha_peca+lista_mov[0]][coluna_peca+lista_mov[1]] = peca_movida
 
 # gera todos os movimentos possíveis para a peça em questão
+# por enquanto trata-se dos movimentos desconsiderando o xeque, o mate e as regras adicionais de movimento
 def gerar_movimentos_possiveis(matriz, peca_movida):
     
   # ve a linha/coluna da peça
@@ -135,21 +136,86 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
               if(cor_peca_diagonal != cor):
                 lista_mov_possiveis.append(mov)   
 
-  return lista_mov_possiveis
+  
 
-  '''
-  elif peca_movida == 2:
+  
+  elif abs(peca_movida.tipo) == 2:       #rei
 
-  elif peca_movida == 3:
+    # movimentos iniciais possiveis para um rei(1 casa em qualquer direção, ataca nessas casas também)
+    movimentos_iniciais_rei = [[0,1], [0,-1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
 
-  elif peca_movida == 4:
+    for mov in movimentos_iniciais_rei:
 
-  elif peca_movida == 5:
+      if(verif_mov(linha_peca, coluna_peca, mov)):
 
-  elif peca_movida == 6:
-        
-  '''
+        if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
+          lista_mov_possiveis.append(mov)
 
+        else:
+          peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
+          cor_peca_diagonal = cor_peca(peca_alvo)
+          if(cor_peca_diagonal != cor):
+              lista_mov_possiveis.append(mov)
+  
+  #elif abs(peca_movida.tipo) == 3:
+
+
+  elif abs(peca_movida.tipo) == 4:        # bispo
+
+    # movimentos iniciais possiveis para um bispo(ao longo da sua diagonal, ataca nessas casas também)
+    movimentos_iniciais_bispo = [[[ 1, 1],[ 2, 2],[ 3, 3],[ 4, 4],[ 5, 5],[ 6, 6],[ 7, 7]],
+                                 [[ 1,-1],[ 2,-2],[ 3,-3],[ 4,-4],[ 5,-5],[ 6,-6],[ 7,-7]],
+                                 [[-1, 1],[-2, 2],[-3, 3],[-4, 4],[-5, 5],[-6, 6],[-7, 7]],
+                                 [[-1,-1],[-2,-2],[-3,-3],[-4,-4],[-5,-5],[-6,-6],[-7,-7]]]
+    
+    for diagonal in movimentos_iniciais_bispo:
+      # para cada diagonal, ele vai verificar até achar uma peça no meio do caminho do bispo e vai dar brake, já que o bispo não pula peças
+      for mov in diagonal:
+        if(verif_mov(linha_peca, coluna_peca, mov)):
+
+          if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
+            lista_mov_possiveis.append(mov)
+
+          else:
+            peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
+            cor_peca_diagonal = cor_peca(peca_alvo)
+            if(cor_peca_diagonal != cor):
+                lista_mov_possiveis.append(mov)
+            break
+        else:
+          break
+
+  #elif abs(peca_movida.tipo) == 5:
+
+  elif abs(peca_movida.tipo) == 6:        # torre
+
+    # movimentos iniciais possiveis para um torre(ao longo da vertical/horizontal, ataca nessas casas também)
+    movimentos_iniciais_bispo = [[[ 0, 1],[ 0, 2],[ 0, 3],[ 0, 4],[ 0, 5],[ 0, 6],[ 0, 7]],
+                                 [[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],[ 6, 0],[ 7, 0]],
+                                 [[-1, 0],[-2, 0],[-3, 0],[-4, 0],[-5, 0],[-6, 0],[-7, 0]],
+                                 [[ 0,-1],[ 0,-2],[ 0,-3],[ 0,-4],[ 0,-5],[ 0,-6],[ 0,-7]]]
+    
+    for reta in movimentos_iniciais_bispo:
+      # para cada reta, ele vai verificar até achar uma peça no meio do caminho do bispo e vai dar brake, já que o bispo não pula peças
+      for mov in reta:
+        if(verif_mov(linha_peca, coluna_peca, mov)):
+
+          if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
+            lista_mov_possiveis.append(mov)
+
+          else:
+            peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
+            cor_peca_diagonal = cor_peca(peca_alvo)
+            if(cor_peca_diagonal != cor):
+                lista_mov_possiveis.append(mov)
+            break
+        else:
+          break
+
+  if(len(lista_mov_possiveis) > 0):
+    return lista_mov_possiveis
+  else:
+    return None
 
 # incializa a matriz_tabuleiro fora do loop do jogo e dos objetos
 
@@ -185,22 +251,30 @@ while(not acabou):
   peca_movida_coluna = int(input("Digite a coluna da peça que deseja mover(começando do 0): "))
 
   lista_mov = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna])
-  print("Lista de movimentos possiveis: ")
 
-  for mov in lista_mov:
-    print(mov)
+  if lista_mov != None:
 
-  print("Digite o movimento desejado da lista(começando do 0): ")
-  indice_mov = int(input())
+    print("Lista de movimentos possiveis: ")
 
-  # terá uma função aqui para verificar se houve um movimento que muda a dinâmica do tabuleiro(promoção, xeque, xeque_mate), nesse caso o movimento básico não servirá
-  
-  movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_mov[indice_mov])
+    for mov in lista_mov:
+      print(mov)
 
-  print("\nTabuleiro após movimento:\n")
+    print("Digite o movimento desejado da lista(começando do 0): ")
+    indice_mov = int(input())
 
-  for linha in matriz_tabuleiro_obj:
-    print(", ".join(f"{int(peca):2}" if isinstance(peca, Peca) else f"{peca:2}" for peca in linha))
+    # terá uma função aqui para verificar se houve um movimento que muda a dinâmica do tabuleiro(promoção, xeque, xeque_mate), nesse caso o movimento básico não servirá
+    
+    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_mov[indice_mov])
 
-  input("\npressione enter para continuar:")
-  limpar_tela()
+    print("\nTabuleiro após movimento:\n")
+
+    for linha in matriz_tabuleiro_obj:
+      print(", ".join(f"{int(peca):2}" if isinstance(peca, Peca) else f"{peca:2}" for peca in linha))
+
+    input("\npressione enter para continuar:")
+    limpar_tela()
+
+  else:
+    print("\nNão há movimento válido para esta peça")
+    input("\npressione enter para continuar:")
+    limpar_tela()
