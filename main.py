@@ -12,16 +12,22 @@ TABULEIRO : matriz de objetos
   1,  1,  1,  1,  1,  1,  1,  1,  
   6,  5,  4,  3,  2,  4,  5,  6,  
 
-a matriz serve apenas para visualização, cada peç
+a matriz serve apenas para visualização, cada peça é um objeto de uma classe denominada Peça
 
 atributos de cada objeto:
 
-tipo:
+1)tipo:
 1: peão     4: bispo
 2: rei      5: cavalo
 3: rainha   6: torre
 
-pos_in_linha e pos_in_col: indice inicial referente à linha/coluna na matriz
+2)pos_in_linha e pos_in_col: indice inicial referente à linha/coluna na matriz
+
+3)roque e en passant: atributos para ajudar na programação dessas 2 regras
+->se a torre e o rei ainda não tiverem se mexido, o valor de roque deles é igual a 1, ou seja, eles podem rocar, caso o contrário é igual a 0
+->se o peão mover 2 casas para frente, naquele momento o seu valor de en passant passa a valer 1 e , se tiver um peão inimigo ao seu lado, ele pode comer e após o movimento do adversário, o valor de en passant volta a ser 0 para tal peão
+
+4)promoção: se um peão chegar na última fileira, seu valor de promoção vale 1 e o programa fornece uma escolha de peça para promover
 
 formato do movimento: [(ind. final linha - ind. inicial linha) , (ind. final coluna - ind. final coluna)]
 ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimento deve ser [0,1]
@@ -29,7 +35,10 @@ ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimen
 cada peça tem uma lista de movimentos possíveis
 ex: rei , pode se mover 1 casa em qualquer direção, logo sua lista de movimentos possíveis inicial é [[0,1], [0,-1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
 
-regras adicionais de movimento: primeiro movimento do peão, roque, grande roque, en passant
+o jogo tem 3 estados: normal, xeque, xeque-mate:
+->no modo normal é permitido realizar qualquer movimento desde que ele seja válido
+->no modo de xeque o jogador precisa fazer uma jogada que bloqueie o ataque adversário
+->no modo de xeque-mate o jogo acaba
 
 ''' 
 
@@ -37,10 +46,12 @@ import os
 
 # definição da classe peça
 class Peca:
-    def __init__(self, tipo, pos_in_linha, pos_in_col):
+    def __init__(self, tipo, pos_in_linha, pos_in_col, roque, enpassant):
       self.tipo = tipo
       self.pos_in_linha = pos_in_linha
-      self.pos_in_col = pos_in_col  
+      self.pos_in_col = pos_in_col
+      self.roque = roque
+      self.enpassant = enpassant  
     def __int__(self):
       return self.tipo
     
@@ -88,13 +99,13 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
   cor = cor_peca(peca_movida)
 
-  if abs(peca_movida.tipo) == 1:    # peão
+  if abs(peca_movida.tipo) == 1:      # peão
 
     # movimentos iniciais possiveis para um peão(pra frente e pra diagonal)   
     mov_possiveis_iniciais_preto = [[1,0],[1,1],[1,-1]]
     mov_possiveis_iniciais_branco =  [[-1,0],[-1,1],[-1,-1]]
 
-    if(cor == 1):                   # peão branco
+    if(cor == 1):                     # peão branco
 
       # se estiver na linha inicial, pode pular 2 casas
       if(linha_peca == 6):
@@ -115,7 +126,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
               if(cor_peca_diagonal != cor):
                 lista_mov_possiveis.append(mov)   
 
-    else:                           # peão preto
+    else:                               # peão preto
       
       # se estiver na linha inicial, pode pular 2 casas
       if(linha_peca == 1):
@@ -139,7 +150,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
   
 
   
-  elif abs(peca_movida.tipo) == 2:       #rei
+  elif abs(peca_movida.tipo) == 2:       # rei
 
     # movimentos iniciais possiveis para um rei(1 casa em qualquer direção, ataca nessas casas também)
     movimentos_iniciais_rei = [[0,1], [0,-1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
@@ -153,12 +164,38 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
         else:
           peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
-          cor_peca_diagonal = cor_peca(peca_alvo)
-          if(cor_peca_diagonal != cor):
+          cor_peca_alvo = cor_peca(peca_alvo)
+          if(cor_peca_alvo != cor):
               lista_mov_possiveis.append(mov)
   
-  #elif abs(peca_movida.tipo) == 3:
+  elif abs(peca_movida.tipo) == 3:        # rainha
+    
+    # movimentos iniciais possiveis para uma rainha(ao longo da sua diagonal e na vertical/horizontal, ataca nessas casas também)
+    movimentos_iniciais_dama = [[[ 1, 1],[ 2, 2],[ 3, 3],[ 4, 4],[ 5, 5],[ 6, 6],[ 7, 7]],
+                                [[ 1,-1],[ 2,-2],[ 3,-3],[ 4,-4],[ 5,-5],[ 6,-6],[ 7,-7]],
+                                [[-1, 1],[-2, 2],[-3, 3],[-4, 4],[-5, 5],[-6, 6],[-7, 7]],
+                                [[-1,-1],[-2,-2],[-3,-3],[-4,-4],[-5,-5],[-6,-6],[-7,-7]],
+                                [[ 0, 1],[ 0, 2],[ 0, 3],[ 0, 4],[ 0, 5],[ 0, 6],[ 0, 7]],
+                                [[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],[ 6, 0],[ 7, 0]],
+                                [[-1, 0],[-2, 0],[-3, 0],[-4, 0],[-5, 0],[-6, 0],[-7, 0]],
+                                [[ 0,-1],[ 0,-2],[ 0,-3],[ 0,-4],[ 0,-5],[ 0,-6],[ 0,-7]]]
+    
+    for linha in movimentos_iniciais_dama:
+      # para cada linha, ele vai verificar até achar uma peça no meio do caminho da dama e vai dar brake, já que a dama não pula peças
+      for mov in linha:
+        if(verif_mov(linha_peca, coluna_peca, mov)):
 
+          if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
+            lista_mov_possiveis.append(mov)
+
+          else:
+            peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
+            cor_peca_alvo = cor_peca(peca_alvo)
+            if(cor_peca_alvo != cor):
+                lista_mov_possiveis.append(mov)
+            break
+        else:
+          break
 
   elif abs(peca_movida.tipo) == 4:        # bispo
 
@@ -178,24 +215,39 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
           else:
             peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
-            cor_peca_diagonal = cor_peca(peca_alvo)
-            if(cor_peca_diagonal != cor):
+            cor_peca_alvo = cor_peca(peca_alvo)
+            if(cor_peca_alvo != cor):
                 lista_mov_possiveis.append(mov)
             break
         else:
           break
 
-  #elif abs(peca_movida.tipo) == 5:
+  elif abs(peca_movida.tipo) == 5:        # cavalo
+    # movimentos iniciais possiveis para um cavalo(L, ataca nessas casas também, além de poder pular as casas)
+    movimentos_iniciais_cavalo = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [2,-1], [-2,1], [-2,-1]]
+
+    for mov in movimentos_iniciais_cavalo:
+      if(verif_mov(linha_peca, coluna_peca, mov)):
+        
+        if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
+          lista_mov_possiveis.append(mov)
+
+        else:
+          peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
+          cor_peca_alvo = cor_peca(peca_alvo)
+          if(cor_peca_alvo != cor):
+              lista_mov_possiveis.append(mov)
+
 
   elif abs(peca_movida.tipo) == 6:        # torre
 
     # movimentos iniciais possiveis para um torre(ao longo da vertical/horizontal, ataca nessas casas também)
-    movimentos_iniciais_bispo = [[[ 0, 1],[ 0, 2],[ 0, 3],[ 0, 4],[ 0, 5],[ 0, 6],[ 0, 7]],
+    movimentos_iniciais_torre = [[[ 0, 1],[ 0, 2],[ 0, 3],[ 0, 4],[ 0, 5],[ 0, 6],[ 0, 7]],
                                  [[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],[ 6, 0],[ 7, 0]],
                                  [[-1, 0],[-2, 0],[-3, 0],[-4, 0],[-5, 0],[-6, 0],[-7, 0]],
                                  [[ 0,-1],[ 0,-2],[ 0,-3],[ 0,-4],[ 0,-5],[ 0,-6],[ 0,-7]]]
     
-    for reta in movimentos_iniciais_bispo:
+    for reta in movimentos_iniciais_torre:
       # para cada reta, ele vai verificar até achar uma peça no meio do caminho do bispo e vai dar brake, já que o bispo não pula peças
       for mov in reta:
         if(verif_mov(linha_peca, coluna_peca, mov)):
@@ -205,8 +257,8 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
           else:
             peca_alvo = matriz[linha_peca+mov[0]][coluna_peca+mov[1]]
-            cor_peca_diagonal = cor_peca(peca_alvo)
-            if(cor_peca_diagonal != cor):
+            cor_peca_alvo = cor_peca(peca_alvo)
+            if(cor_peca_alvo != cor):
                 lista_mov_possiveis.append(mov)
             break
         else:
@@ -235,7 +287,7 @@ for i in range(8):
   linha = []
   for j in range(8):
     if(matriz_tabuleiro_int[i][j] != 0):
-      linha.append(Peca(tipo = matriz_tabuleiro_int[i][j], pos_in_linha = i, pos_in_col = j))
+      linha.append(Peca(tipo = matriz_tabuleiro_int[i][j], pos_in_linha = i, pos_in_col = j, roque = 1, enpassant = 0))
     else:
       linha.append(0)
   matriz_tabuleiro_obj.append(linha)
