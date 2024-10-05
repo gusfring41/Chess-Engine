@@ -23,11 +23,13 @@ atributos de cada objeto:
 
 2)pos_in_linha e pos_in_col: indice inicial referente à linha/coluna na matriz
 
-3)roque e en passant: atributos para ajudar na programação dessas 2 regras
+3)imagem: png da peça
+
+4)roque e en passant: atributos para ajudar na programação dessas 2 regras
 ->se a torre e o rei ainda não tiverem se mexido, o valor de roque deles é igual a 1, ou seja, eles podem rocar, caso o contrário é igual a 0
 ->se o peão mover 2 casas para frente, naquele momento o seu valor de en passant passa a valer 1 e , se tiver um peão inimigo ao seu lado, ele pode comer e após o movimento do adversário, o valor de en passant volta a ser 0 para tal peão
 
-4)promoção: se um peão chegar na última fileira, seu valor de promoção vale 1 e o programa fornece uma escolha de peça para promover
+5)promoção: se um peão chegar na última fileira, seu valor de promoção vale 1 e o programa fornece uma escolha de peça para promover
 
 formato do movimento: [(ind. final linha - ind. inicial linha) , (ind. final coluna - ind. final coluna)]
 ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimento deve ser [0,1]
@@ -43,17 +45,97 @@ o jogo tem 3 estados: normal, xeque, xeque-mate:
 ''' 
 
 import os
+import pygame
+
+pygame.init()
 
 # definição da classe peça
 class Peca:
-    def __init__(self, tipo, pos_in_linha, pos_in_col, roque, enpassant):
+    def __init__(self, tipo, pos_in_linha, pos_in_col, imagem, roque, enpassant):
       self.tipo = tipo
       self.pos_in_linha = pos_in_linha
       self.pos_in_col = pos_in_col
+      self.imagem = imagem
       self.roque = roque
       self.enpassant = enpassant  
     def __int__(self):
       return self.tipo
+    
+# função que pŕinta um tabuleiro de xadrez 600x600
+def printar_tabuleiro():
+  tabuleiro = pygame.display.set_mode((600, 600))
+  tabuleiro.fill((255,255,255))
+  offset_yt = -75
+
+  for i in range (8):
+    offset_xt = 0
+    offset_yt += 75
+    for j in range (8):
+      if((i+j)%2 == 0):
+        pygame.draw.rect(tabuleiro, (255, 255, 255), (offset_xt, offset_yt, 75, 75))
+      else:
+        pygame.draw.rect(tabuleiro, (150 , 50, 205), (offset_xt, offset_yt, 75, 75))
+      offset_xt += 75
+  return tabuleiro
+
+# função que printa a imagem da peça específica
+def printar_imagem(peca, tabuleiro):
+  tabuleiro.blit(peca.imagem, (peca.pos_in_col*75, -75 + 75*(peca.pos_in_linha+1)))
+    
+# carregando png de cada peça(todas as peças são 70x70)
+def achar_imagem(tipo_peca):
+
+  if tipo_peca > 0:
+    if tipo_peca == 1:
+      imagem_peca = pygame.image.load("pieces-png/white-pawn.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == 2:
+      imagem_peca = pygame.image.load("pieces-png/white-king.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == 3:
+      imagem_peca = pygame.image.load("pieces-png/white-queen.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == 4:
+      imagem_peca = pygame.image.load("pieces-png/white-bishop.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == 5:
+      imagem_peca = pygame.image.load("pieces-png/white-knight.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    else:
+      imagem_peca = pygame.image.load("pieces-png/white-rook.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+
+  else:
+    if tipo_peca == -1:
+      imagem_peca = pygame.image.load("pieces-png/black-pawn.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == -2:
+      imagem_peca = pygame.image.load("pieces-png/black-king.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == -3:
+      imagem_peca = pygame.image.load("pieces-png/black-queen.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == -4:
+      imagem_peca = pygame.image.load("pieces-png/black-bishop.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    elif tipo_peca == -5:
+      imagem_peca = pygame.image.load("pieces-png/black-knight.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
+    else:
+      imagem_peca = pygame.image.load("pieces-png/black-rook.png")
+      imagem_peca = pygame.transform.smoothscale(imagem_peca ,(70, 70))
+      return imagem_peca
     
 # macro para limpar tela  
 def limpar_tela():
@@ -287,7 +369,7 @@ for i in range(8):
   linha = []
   for j in range(8):
     if(matriz_tabuleiro_int[i][j] != 0):
-      linha.append(Peca(tipo = matriz_tabuleiro_int[i][j], pos_in_linha = i, pos_in_col = j, roque = 1, enpassant = 0))
+      linha.append(Peca(tipo = matriz_tabuleiro_int[i][j], pos_in_linha = i, pos_in_col = j, imagem = achar_imagem(matriz_tabuleiro_int[i][j]) , roque = 1, enpassant = 0))
     else:
       linha.append(0)
   matriz_tabuleiro_obj.append(linha)
@@ -295,6 +377,20 @@ for i in range(8):
 acabou = 0
 
 while(not acabou):
+
+  tabuleiro = printar_tabuleiro()
+
+  for i in range(8):
+    for j in range(8):
+      if(matriz_tabuleiro_obj[i][j] != 0):
+        printar_imagem(matriz_tabuleiro_obj[i][j], tabuleiro)
+
+  for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            acabou = True
+
+  pygame.display.flip()
+
 
   for linha in matriz_tabuleiro_obj:
     print(", ".join(f"{int(peca):2}" if isinstance(peca, Peca) else f"{peca:2}" for peca in linha))
