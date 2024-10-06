@@ -543,7 +543,11 @@ while(not acabou):
       '''
 
       if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
-        lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_ataque_inimigo, opcao_jogador)
+        if((opcao_jogador == 1) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo > 0)) or ((opcao_jogador == 0) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo < 0)):
+          lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_ataque_inimigo, opcao_jogador)
+        else:
+          lista_mov_possiveis = None
+          peca_selecionada = None
       else:
         lista_mov_possiveis = None
         peca_selecionada = None
