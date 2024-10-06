@@ -129,23 +129,53 @@ def cor_peca(peca):
     return 0
 
 # função para veririficar se o movimento cogitado está nos limites da matriz(0 a 7) 
-def verif_mov(linha_peca, coluna_peca, mov):
+def verif_mov_tab(linha_peca, coluna_peca, mov):
   return 0 <= linha_peca + mov[0] <= 7 and 0 <= coluna_peca + mov[1] <= 7
 
 # movimento básico de substituição entre 2 posições
-def movimento_basico(matriz, peca_movida, lista_mov):
+def movimento_basico(matriz, peca_movida, mov):
     
   # ve a linha/coluna da peça
   linha_peca = peca_movida.pos_in_linha
   coluna_peca = peca_movida.pos_in_col
 
   # atualiza a nova linha/coluna da peça
-  peca_movida.pos_in_linha = linha_peca+lista_mov[0]
-  peca_movida.pos_in_col = coluna_peca+lista_mov[1]
+  peca_movida.pos_in_linha = linha_peca+mov[0]
+  peca_movida.pos_in_col = coluna_peca+mov[1]
 
   # troca a peça de lugar na matriz, deixando o espaço onde ela estava como 0(sem peça na casa)
   matriz[linha_peca][coluna_peca] = 0
-  matriz[linha_peca+lista_mov[0]][coluna_peca+lista_mov[1]] = peca_movida
+  matriz[linha_peca+mov[0]][coluna_peca+mov[1]] = peca_movida
+
+  # se houve movimento, verifica se o movimento foi de uma torre, nesse caso a possibilidades de roque e grande roque são alteradas(a verificação do rei é feita na função de mov do rei)
+  if(abs(peca_movida.tipo) == 6):
+    peca_movida.roque = 0
+
+# movimento básico do rei
+def movimento_rei(matriz, peca_movida, lista_mov):
+
+  # ve a linha/coluna da peça
+  linha_peca = peca_movida.pos_in_linha
+  coluna_peca = peca_movida.pos_in_col
+
+  # atualiza a nova linha/coluna da peça
+  peca_movida.pos_in_linha = linha_peca+mov[0]
+  peca_movida.pos_in_col = coluna_peca+mov[1]
+
+  # troca a peça de lugar na matriz, deixando o espaço onde ela estava como 0(sem peça na casa)
+  matriz[linha_peca][coluna_peca] = 0
+  matriz[linha_peca+mov[0]][coluna_peca+mov[1]] = peca_movida
+
+  # como o rei se movimentou, não há mais possibilidade de roque
+  peca_movida.roque = 0
+
+  # se o movimento for um roque, também é feita uma movimentação na torre
+  if(mov == [0, 2]):
+    movimento_basico(matriz, matriz[linha_peca][coluna_peca+3], [0, -2])
+  elif(mov == [0, -2]):
+    movimento_basico(matriz, matriz[linha_peca][coluna_peca-4], [0, 3])
+
+
 
 # gera todos os movimentos possíveis para a peça em questão
 # por enquanto trata-se dos movimentos desconsiderando o xeque, o mate e as regras adicionais de movimento
@@ -175,7 +205,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
       
       for mov in mov_possiveis_iniciais_branco:
         
-        if(verif_mov(linha_peca, coluna_peca, mov)):
+        if(verif_mov_tab(linha_peca, coluna_peca, mov)):
           
           # se ele não move na coluna, então ele está indo para frente e verificamos se o espaço está vazio para passar
           if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0 and mov[1] == 0):
@@ -196,7 +226,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
       for mov in mov_possiveis_iniciais_preto:
           
-        if(verif_mov(linha_peca, coluna_peca, mov)):
+        if(verif_mov_tab(linha_peca, coluna_peca, mov)):
 
           # se ele não move na coluna, então ele está indo para frente e verificamos se o espaço está vazio para passar
           if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0 and mov[1] == 0):
@@ -219,7 +249,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
 
     for mov in movimentos_iniciais_rei:
 
-      if(verif_mov(linha_peca, coluna_peca, mov)):
+      if(verif_mov_tab(linha_peca, coluna_peca, mov)):
 
         if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
           lista_mov_possiveis.append(mov)
@@ -229,6 +259,29 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
           cor_peca_alvo = cor_peca(peca_alvo)
           if(cor_peca_alvo != cor):
               lista_mov_possiveis.append(mov)
+
+    # verificação do roque e do grande roque
+
+    movimentos_roque = [[0,2], [0, -2]]
+  
+    for mov in movimentos_roque:
+      if(verif_mov_tab(linha_peca, coluna_peca, mov)):
+        # veririfica se o rei já moveu e se as casas ao seu lado estão vazias
+
+        if(matriz[linha_peca][coluna_peca+(1*mov[1]//2)] == 0) and (matriz[linha_peca][coluna_peca+(2*mov[1]//2)] == 0) and (peca_movida.roque == 1):
+
+          # se a torre estiver no canto do tabuleiro e não tiver se movido ainda, o roque é possível
+          if(mov[1] == 2):
+            if(matriz[linha_peca][7] != 0) and (abs(matriz[linha_peca][7].tipo) == 6) and (matriz[linha_peca][7].roque == 1):
+              lista_mov_possiveis.append(mov)
+          elif(mov[1] == -2):
+            if(matriz[linha_peca][0] != 0) and (abs(matriz[linha_peca][0].tipo) == 6) and (matriz[linha_peca][0].roque == 1) and (matriz[linha_peca][coluna_peca-3] == 0):
+              lista_mov_possiveis.append(mov)
+
+
+    
+
+
   
   elif abs(peca_movida.tipo) == 3:        # rainha
     
@@ -245,7 +298,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
     for linha in movimentos_iniciais_dama:
       # para cada linha, ele vai verificar até achar uma peça no meio do caminho da dama e vai dar brake, já que a dama não pula peças
       for mov in linha:
-        if(verif_mov(linha_peca, coluna_peca, mov)):
+        if(verif_mov_tab(linha_peca, coluna_peca, mov)):
 
           if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
             lista_mov_possiveis.append(mov)
@@ -270,7 +323,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
     for diagonal in movimentos_iniciais_bispo:
       # para cada diagonal, ele vai verificar até achar uma peça no meio do caminho do bispo e vai dar brake, já que o bispo não pula peças
       for mov in diagonal:
-        if(verif_mov(linha_peca, coluna_peca, mov)):
+        if(verif_mov_tab(linha_peca, coluna_peca, mov)):
 
           if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
             lista_mov_possiveis.append(mov)
@@ -289,7 +342,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
     movimentos_iniciais_cavalo = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [2,-1], [-2,1], [-2,-1]]
 
     for mov in movimentos_iniciais_cavalo:
-      if(verif_mov(linha_peca, coluna_peca, mov)):
+      if(verif_mov_tab(linha_peca, coluna_peca, mov)):
         
         if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
           lista_mov_possiveis.append(mov)
@@ -312,7 +365,7 @@ def gerar_movimentos_possiveis(matriz, peca_movida):
     for reta in movimentos_iniciais_torre:
       # para cada reta, ele vai verificar até achar uma peça no meio do caminho do bispo e vai dar brake, já que o bispo não pula peças
       for mov in reta:
-        if(verif_mov(linha_peca, coluna_peca, mov)):
+        if(verif_mov_tab(linha_peca, coluna_peca, mov)):
 
           if(matriz[linha_peca+mov[0]][coluna_peca+mov[1]] == 0):
             lista_mov_possiveis.append(mov)
@@ -428,7 +481,11 @@ while(not acabou):
             break
         
       if(pode_movimentar):
-        movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa)
+
+        if(abs(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo) == 2):
+          movimento_rei(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa)
+        else:
+          movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa)
 
       peca_selecionada = None
       lista_mov_possiveis = None
