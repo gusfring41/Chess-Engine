@@ -48,6 +48,7 @@ import os
 import pygame
 
 pygame.init()
+pygame.display.set_caption("chess")
 
 # definição da classe peça
 class Peca:
@@ -60,28 +61,7 @@ class Peca:
       self.enpassant = enpassant  
     def __int__(self):
       return self.tipo
-    
-# função que pŕinta um tabuleiro de xadrez 600x600
-def printar_tabuleiro():
-  tabuleiro = pygame.display.set_mode((600, 600))
-  tabuleiro.fill((255,255,255))
-  offset_yt = -75
 
-  for i in range (8):
-    offset_xt = 0
-    offset_yt += 75
-    for j in range (8):
-      if((i+j)%2 == 0):
-        pygame.draw.rect(tabuleiro, (255, 255, 255), (offset_xt, offset_yt, 75, 75))
-      else:
-        pygame.draw.rect(tabuleiro, (150 , 50, 205), (offset_xt, offset_yt, 75, 75))
-      offset_xt += 75
-  return tabuleiro
-
-# função que printa a imagem da peça específica
-def printar_imagem(peca, tabuleiro):
-  tabuleiro.blit(peca.imagem, (peca.pos_in_col*75, -75 + 75*(peca.pos_in_linha+1)))
-    
 # carregando png de cada peça(todas as peças são 70x70)
 def achar_imagem(tipo_peca):
 
@@ -374,55 +354,88 @@ for i in range(8):
       linha.append(0)
   matriz_tabuleiro_obj.append(linha)
 
-acabou = 0
+
+acabou = False
+tabuleiro_xadrez = pygame.display.set_mode((600, 600))
+
+peca_selecionada = None # nao está otimizado
+lista_mov_possiveis = None
 
 while(not acabou):
 
-  tabuleiro = printar_tabuleiro()
+  tabuleiro_xadrez.fill((255,255,255))
+  offset_yt = -75
+
+  for i in range (8):
+    offset_xt = 0
+    offset_yt += 75
+    for j in range (8):
+      if((i+j)%2 == 0):
+        pygame.draw.rect(tabuleiro_xadrez, (255, 255, 255), (offset_xt, offset_yt, 75, 75))
+      else:
+        pygame.draw.rect(tabuleiro_xadrez, (150 , 50, 205), (offset_xt, offset_yt, 75, 75))
+      offset_xt += 75
 
   for i in range(8):
     for j in range(8):
       if(matriz_tabuleiro_obj[i][j] != 0):
-        printar_imagem(matriz_tabuleiro_obj[i][j], tabuleiro)
+        peca = matriz_tabuleiro_obj[i][j]
+        tabuleiro_xadrez.blit(peca.imagem, (peca.pos_in_col*75, -73 + 75*(peca.pos_in_linha+1)))
+
+  if peca_selecionada is not None:
+    pontos = [(peca_selecionada[1] * 75, peca_selecionada[0] * 75),  
+              (peca_selecionada[1] * 75 + 75, peca_selecionada[0] * 75),  
+              (peca_selecionada[1] * 75 + 75, peca_selecionada[0] * 75 + 75),  
+              (peca_selecionada[1] * 75, peca_selecionada[0] * 75 + 75)]
+    pygame.draw.polygon(tabuleiro_xadrez, (0 , 0, 0), pontos, 3)
+
+  if lista_mov_possiveis is not None:
+    for mov in lista_mov_possiveis:
+      pontos = [((peca_selecionada[1]+mov[1])*75, (peca_selecionada[0]+mov[0])*75),  
+                ((peca_selecionada[1]+mov[1])*75 + 75, (peca_selecionada[0]+mov[0])*75),  
+                ((peca_selecionada[1]+mov[1])*75 + 75, (peca_selecionada[0]+mov[0])*75 + 75),  
+                ((peca_selecionada[1]+mov[1])*75, (peca_selecionada[0]+mov[0])*75 + 75)]
+      pygame.draw.polygon(tabuleiro_xadrez, (0 ,0, 0),  pontos, 3)
 
   for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            acabou = True
+  
+    if event.type == pygame.MOUSEBUTTONDOWN:
+
+      mouse_x, mouse_y = pygame.mouse.get_pos()
+      peca_movida_linha = int(mouse_y/75)
+      peca_movida_coluna = int(mouse_x/75)
+      print((peca_movida_linha, peca_movida_coluna))
+      peca_selecionada = [peca_movida_linha, peca_movida_coluna]
+
+      if(matriz_tabuleiro_obj[i][j] != 0):
+        lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna])
+      else:
+        lista_mov_possiveis = None
+        peca_selecionada = None
+
+    elif event.type == pygame.MOUSEBUTTONUP:
+      
+      pode_movimentar = False
+      mouse_x, mouse_y = pygame.mouse.get_pos()
+      linha_casa = int(mouse_y/75)
+      coluna_casa = int(mouse_x/75)
+      movimento_ate_casa = [linha_casa-peca_movida_linha, coluna_casa-peca_movida_coluna]
+
+      if lista_mov_possiveis is not None:
+        for mov in lista_mov_possiveis:
+          if(mov == movimento_ate_casa):
+            pode_movimentar = 1
+            break
+        
+      if(pode_movimentar):
+        movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa)
+
+      peca_selecionada = None
+      lista_mov_possiveis = None
+
+    elif event.type == pygame.QUIT:
+      acabou = True
 
   pygame.display.flip()
 
-
-  for linha in matriz_tabuleiro_obj:
-    print(", ".join(f"{int(peca):2}" if isinstance(peca, Peca) else f"{peca:2}" for peca in linha))
-
-  peca_movida_linha = int(input("Digite a linha da peça que deseja mover(começando do 0): "))
-  peca_movida_coluna = int(input("Digite a coluna da peça que deseja mover(começando do 0): "))
-
-  lista_mov = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna])
-
-  if lista_mov != None:
-
-    print("Lista de movimentos possiveis: ")
-
-    for mov in lista_mov:
-      print(mov)
-
-    print("Digite o movimento desejado da lista(começando do 0): ")
-    indice_mov = int(input())
-
-    # terá uma função aqui para verificar se houve um movimento que muda a dinâmica do tabuleiro(promoção, xeque, xeque_mate), nesse caso o movimento básico não servirá
-    
-    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_mov[indice_mov])
-
-    print("\nTabuleiro após movimento:\n")
-
-    for linha in matriz_tabuleiro_obj:
-      print(", ".join(f"{int(peca):2}" if isinstance(peca, Peca) else f"{peca:2}" for peca in linha))
-
-    input("\npressione enter para continuar:")
-    limpar_tela()
-
-  else:
-    print("\nNão há movimento válido para esta peça")
-    input("\npressione enter para continuar:")
-    limpar_tela()
+pygame.quit()
