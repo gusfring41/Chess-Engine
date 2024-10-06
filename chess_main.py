@@ -407,7 +407,7 @@ while(not acabou):
       print((peca_movida_linha, peca_movida_coluna))
       peca_selecionada = [peca_movida_linha, peca_movida_coluna]
 
-      if(matriz_tabuleiro_obj[i][j] != 0):
+      if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
         lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna])
       else:
         lista_mov_possiveis = None
