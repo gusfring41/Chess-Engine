@@ -47,6 +47,7 @@ o jogo tem 3 estados: normal, xeque, xeque-mate:
 import os
 import pygame
 import sys
+import random
 
 pygame.init()
 
@@ -63,6 +64,7 @@ class Peca:
       return self.tipo
 
 # carregando png de cada peça(todas as peças são 70x70)
+# nota: fazer um dicionario com as imagens depois
 def achar_imagem(tipo_peca):
 
   if tipo_peca > 0:
@@ -166,6 +168,7 @@ def movimento_basico(matriz, peca_movida, mov, jogador):
       elif(mov == [0, -2]):
         movimento_basico(matriz, matriz[linha_peca][coluna_peca-4], [0, 3], jogador)
   elif(abs(peca_movida.tipo) == 1):
+
     if(mov == [2,0]) or (mov == [-2,0]):
       peca_movida.enpassant = 1
     elif(mov[1] != 0) and (peca_inimiga == 0):
@@ -434,11 +437,10 @@ while(menu_rodando):
   for event in pygame.event.get():
     if event.type == pygame.MOUSEBUTTONDOWN:
       mouse_x, mouse_y = pygame.mouse.get_pos()
-      print(mouse_x, mouse_y)
 
       if(225 <= mouse_x <= 300) and (225 <= mouse_y <= 300):
         opcao_jogador = 0
-      elif(300 <= mouse_y <= 375) and (300 <= mouse_y <= 375):
+      elif(300 <= mouse_x <= 375) and (300 <= mouse_y <= 375):
         opcao_jogador = 1
 
     elif event.type == pygame.MOUSEBUTTONUP:
@@ -487,6 +489,9 @@ tabuleiro_xadrez = pygame.display.set_mode((600, 600))
 
 peca_selecionada = None 
 lista_mov_possiveis = None
+lista_ataque_inimigo = None
+lista_ataque_jogador = None
+turno = 1
 
 while(not acabou):
 
@@ -524,56 +529,83 @@ while(not acabou):
                 ((peca_selecionada[1]+mov[1])*75, (peca_selecionada[0]+mov[0])*75 + 75)]
       pygame.draw.polygon(tabuleiro_xadrez, (0 ,0, 0),  pontos, 3)
 
-  for event in pygame.event.get():
-  
-    if event.type == pygame.MOUSEBUTTONDOWN:
+  if(turno == opcao_jogador):
+    for event in pygame.event.get():
+    
+      if event.type == pygame.MOUSEBUTTONDOWN:
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        peca_movida_linha = int(mouse_y/75)
+        peca_movida_coluna = int(mouse_x/75)
+        peca_selecionada = [peca_movida_linha, peca_movida_coluna]
 
-      mouse_x, mouse_y = pygame.mouse.get_pos()
-      peca_movida_linha = int(mouse_y/75)
-      peca_movida_coluna = int(mouse_x/75)
-      peca_selecionada = [peca_movida_linha, peca_movida_coluna]
+        lista_ataque_inimigo = None
+        '''
+        posicao_rei = None
 
-      lista_ataque_inimigo = None
-      '''
-      posicao_rei = None
+        for casa_atacada in lista_ataque_inimigo:
+          if casa_atacada = posicao_rei:
+            cheque()
+        '''
 
-      for casa_atacada in lista_ataque_inimigo:
-        if casa_atacada = posicao_rei:
-          cheque()
-      '''
-
-      if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
-        if((opcao_jogador == 1) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo > 0)) or ((opcao_jogador == 0) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo < 0)):
-          lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_ataque_inimigo, opcao_jogador)
+        if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
+          if((opcao_jogador == 1) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo > 0)) or ((opcao_jogador == 0) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo < 0)):
+            lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_ataque_inimigo, opcao_jogador)
+          else:
+            lista_mov_possiveis = None
+            peca_selecionada = None
         else:
           lista_mov_possiveis = None
           peca_selecionada = None
-      else:
-        lista_mov_possiveis = None
-        peca_selecionada = None
 
-    elif event.type == pygame.MOUSEBUTTONUP:
-      
-      pode_movimentar = False
-      mouse_x, mouse_y = pygame.mouse.get_pos()
-      linha_casa = int(mouse_y/75)
-      coluna_casa = int(mouse_x/75)
-      movimento_ate_casa = [linha_casa-peca_movida_linha, coluna_casa-peca_movida_coluna]
-
-      if lista_mov_possiveis is not None:
-        for mov in lista_mov_possiveis:
-          if(mov == movimento_ate_casa):
-            pode_movimentar = 1
-            break
+      elif event.type == pygame.MOUSEBUTTONUP:
         
-      if(pode_movimentar):
-        movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
+        pode_movimentar = False
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        linha_casa = int(mouse_y/75)
+        coluna_casa = int(mouse_x/75)
+        movimento_ate_casa = [linha_casa-peca_movida_linha, coluna_casa-peca_movida_coluna]
 
-      peca_selecionada = None
-      lista_mov_possiveis = None
+        if lista_mov_possiveis is not None:
+          for mov in lista_mov_possiveis:
+            if(mov == movimento_ate_casa):
+              pode_movimentar = 1
+              break
+          
+        if(pode_movimentar):
+          movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
+          turno = 1 - turno
 
-    elif event.type == pygame.QUIT:
-      acabou = True
+        peca_selecionada = None
+        lista_mov_possiveis = None
+
+      elif event.type == pygame.QUIT:
+        acabou = True
+
+  else:
+
+    if(opcao_jogador == 0):
+      menor_ini = 1
+      maior_ini = 6
+    else:
+      menor_ini = -6
+      maior_ini = -1
+
+    lista_mov_adv = []
+
+    for i in range(8):
+      for j in range(8):
+        if(matriz_tabuleiro_obj[i][j] != 0):
+          if(menor_ini <= matriz_tabuleiro_obj[i][j].tipo <= maior_ini):
+            lista_ataques_peca = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[i][j], lista_ataque_jogador, opcao_jogador)
+            if(lista_ataques_peca is not None):
+              for mov in lista_ataques_peca:
+                lista_mov_adv.append([i, j, mov[0], mov[1]])
+
+    index_aleatorio = random.randint(0, len(lista_mov_adv)-1)
+    mov_adv = lista_mov_adv[index_aleatorio]
+    
+    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_adv[0]][mov_adv[1]], [mov_adv[2], mov_adv[3]], opcao_jogador)
+    turno = 1 - turno
 
   pygame.display.flip()
 
