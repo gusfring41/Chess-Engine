@@ -129,6 +129,17 @@ def achar_imagem(tipo_peca):
 # macro para limpar tela  
 def limpar_tela():
   os.system('cls' if os.name == 'nt' else 'clear')
+
+# função para veririficar se o movimento cogitado está nos limites da matriz(0 a 7) 
+def verif_mov_tab(linha_peca, coluna_peca, mov):
+  return 0 <= linha_peca + mov[0] <= 7 and 0 <= coluna_peca + mov[1] <= 7
+
+# função para retornar cor da peça(1 branco 0 preto)
+def cor_peca(peca):
+  if(peca.tipo > 0):
+    return 1
+  else:
+    return -1
   
 # função para gerar casas (x, y) atacadas pelo inimigo/jogador após movimento
 def casas_atacadas(matrizt, menor_init, maior_init, jogadort):
@@ -215,10 +226,6 @@ def verif_xeque(matrizx, peca_movidax, movx, jogadorx, vez):
       return False
   print("ta suave")
   return True
-      
-# função para veririficar se o movimento cogitado está nos limites da matriz(0 a 7) 
-def verif_mov_tab(linha_peca, coluna_peca, mov):
-  return 0 <= linha_peca + mov[0] <= 7 and 0 <= coluna_peca + mov[1] <= 7
 
 # movimento básico de substituição entre 2 posições em uma matriz cópia(nota: atualizar en passant)
 def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
@@ -264,11 +271,15 @@ def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
         movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca+3], [0, -2], jogadorb)
       elif(movb == [0, -2]):
         movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca-4], [0, 3], jogadorb)
-  elif(abs(peca_movidab.tipo) == 1):
-
+  elif(abs(peca_copia.tipo) == 1):
+    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo
+    if(peca_copia.pos_in_linha == 0) or (peca_copia.pos_in_linha == 7):
+      promocao_peao(peca_copia, cor_peca(peca_copia))
+    # atualiza en passant se o primeiro movimento for 2 casa para frente
     if(movb == [2,0]) or (movb == [-2,0]):
-      peca_movidab.enpassant = 1
+      peca_copia.enpassant = 1
     elif(movb[1] != 0) and (peca_inimiga == 0):
+      # come o peão caso tenha realizado en passant
       matrizb[linha_peca][coluna_peca+movb[1]] = 0
 
 # movimento básico de substituição entre 2 posições(nota: atualizar en passant)
@@ -311,9 +322,14 @@ def movimento_basico(matriz, peca_movida, mov, jogador):
         movimento_basico(matriz, matriz[linha_peca][coluna_peca-4], [0, 3], jogador)
   elif(abs(peca_movida.tipo) == 1):
 
+    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo
+    if(peca_movida.pos_in_linha == 0) or (peca_movida.pos_in_linha == 7):
+      promocao_peao(peca_movida, cor_peca(peca_movida))
+    # atualiza en passant se o primeiro movimento for 2 casa para frente
     if(mov == [2,0]) or (mov == [-2,0]):
       peca_movida.enpassant = 1
     elif(mov[1] != 0) and (peca_inimiga == 0):
+      # come o peão caso tenha realizado en passant
       matriz[linha_peca][coluna_peca+mov[1]] = 0
 
 # gera todos os movimentos possíveis de todas as peças da cor em questão para a IA(formato: [i_peca, j_peca, mov[0], mov[1]])
@@ -333,13 +349,6 @@ def gerar_todos_movimentos_possiveis(matrizg, menor_inig, maior_inig, jogadorg):
       return lista_todos_mov
     else:
       return None
-    
-# função para retornar cor da peça(1 branco 0 preto)
-def cor_peca(peca):
-  if(peca.tipo > 0):
-    return 1
-  else:
-    return 0
 
 # gera todos os movimentos possíveis para a peça da cor em questão
 def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador):
@@ -364,10 +373,10 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador):
 
     if(cor == 1):                     # peão branco
 
-      # se estiver na linha inicial, pode pular 2 casas
-      if((linha_peca == 6) and (jogador == 1)):
+      # se estiver na linha inicial e estiver vazio  na frente, pode pular 2 casas
+      if((linha_peca == 6) and (jogador == 1) and (matriz[linha_peca-1][coluna_peca] == 0)):
         mov_possiveis_iniciais_branco.append([-2,0])
-      elif((linha_peca == 1) and (jogador == 0)):
+      elif((linha_peca == 1) and (jogador == 0) and (matriz[linha_peca+1][coluna_peca] == 0)):
         mov_possiveis_iniciais_branco.append([2,0])
       
       for mov in mov_possiveis_iniciais_branco:
@@ -392,10 +401,10 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador):
 
     else:                               # peão preto
       
-      # se estiver na linha inicial, pode pular 2 casas
-      if((linha_peca == 6) and (jogador == 0)):
+      # se estiver na linha inicial e estiver vazio na frente, pode pular 2 casas
+      if((linha_peca == 6) and (jogador == 0) and (matriz[linha_peca-1][coluna_peca] == 0)):
         mov_possiveis_iniciais_preto.append([-2,0])
-      elif((linha_peca == 1) and (jogador == 1)):
+      elif((linha_peca == 1) and (jogador == 1) and (matriz[linha_peca+1][coluna_peca] == 0)):
         mov_possiveis_iniciais_preto.append([2,0])
 
       for mov in mov_possiveis_iniciais_preto:
@@ -567,6 +576,10 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador):
     return lista_mov_possiveis
   else:
     return None
+  
+def promocao_peao(peao, cor_do_peao):
+  peao.tipo = cor_do_peao*3
+  peao.imagem = achar_imagem(peao.tipo)
 
 # menu screen
 pygame.display.set_caption("menu")
