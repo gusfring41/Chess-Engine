@@ -166,8 +166,6 @@ def casas_atacadas(matrizt, menor_init, maior_init, jogadort):
     lista_ataque_inimigo = list(set(lista_ataque_inimigo))            
 
     if(len(lista_ataque_inimigo) > 0):
-      print("ataque inimigo:")
-      print(lista_ataque_inimigo)
       return lista_ataque_inimigo
     else:
       return None
@@ -179,7 +177,6 @@ def verif_xeque(matrizx, peca_movidax, movx, jogadorx, vez):
   rei_preto_copia = rei_preto
   rei_branco_copia = rei_branco
 
-  print("\nverificacao de xeque no movimento ", movx, "indices da peca: ", peca_movidax.pos_in_linha, peca_movidax.pos_in_col, "jogador: ", jogadorx, "turno: ", vez, "\n")
   matriz_copia = []
   for linha in matrizx:
       nova_linha = []
@@ -218,13 +215,9 @@ def verif_xeque(matrizx, peca_movidax, movx, jogadorx, vez):
 
   lista_ataque_oposto = casas_atacadas(matriz_copia, menor_inix, maior_inix, jogadorx)
 
-  print("casa do rei: ", rei)
-
   for casa in lista_ataque_oposto:
     if(casa == rei):
-      print("tem xeque")
       return False
-  print("ta suave")
   return True
 
 # movimento básico de substituição entre 2 posições em uma matriz cópia(nota: atualizar en passant)
@@ -713,6 +706,7 @@ while(not acabou):
       pygame.draw.polygon(tabuleiro_xadrez, (0 ,0, 0),  pontos, 3)
 
   if(turno == opcao_jogador):
+    
     for event in pygame.event.get():
     
       if event.type == pygame.MOUSEBUTTONDOWN:
@@ -722,7 +716,6 @@ while(not acabou):
         peca_movida_coluna = int(mouse_x/75)
         peca_selecionada = [peca_movida_linha, peca_movida_coluna]
 
-        #lista_mov_possiveis_jog_total = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_ini, maior_ini, opcao_jogador) adicionar mate no adversàrio!!!
         lista_mov_possiveis_jog = []
 
         if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
@@ -732,7 +725,6 @@ while(not acabou):
               for mov_jog in lista_mov_possiveis_jog[:]:
                 if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], (mov_jog[0], mov_jog[1]), opcao_jogador, turno)):
                   lista_mov_possiveis_jog.remove(mov_jog)
-                  print("remove mov", mov_jog)
             else:
               lista_mov_possiveis_jog = []
               peca_selecionada = []
@@ -752,7 +744,6 @@ while(not acabou):
         movimento_ate_casa = [linha_casa-peca_movida_linha, coluna_casa-peca_movida_coluna]
 
         if lista_mov_possiveis_jog is not None:
-          print("movs restantes:", lista_mov_possiveis_jog)
           for op_mov_jog in lista_mov_possiveis_jog:
             if(op_mov_jog == movimento_ate_casa):
               pode_movimentar = 1
@@ -777,36 +768,62 @@ while(not acabou):
       menor_ini = 1
       maior_ini = 6
       rei_ini = rei_branco
+      menor_jog = -6
+      maior_jog = -1
+      rei_jog = rei_preto
     else:
       menor_ini = -6
       maior_ini = -1
       rei_ini = rei_preto
+      menor_jog = 1
+      maior_jog = 6
+      rei_jog = rei_branco
 
     # gera todos os movimentos possiveis para todas as peças da IA e seleciona um aleatoriamente
     lista_mov_adv = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_ini, maior_ini, opcao_jogador)
 
-    print("movs iniciais:", lista_mov_adv)
     if(lista_mov_adv is not None):
       for mov_adv in lista_mov_adv[:]:
         if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_adv[0]][mov_adv[1]], (mov_adv[2], mov_adv[3]), opcao_jogador, turno)):
           lista_mov_adv.remove(mov_adv)
-          print("remove mov", mov_adv)
     else:
-      print("nao tem mov")
+      # não tem nenhum movimento disponível(?)
       break
     
     # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
     if(len(lista_mov_adv) == 0):
-      print("matee")
+      if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[rei_ini[0]][rei_ini[1]], (0, 0), opcao_jogador, turno)):
+        print("mate")
+      else:
+        print("afogamento")
       acabou = True
       break
-
-    print("movs restantes:", lista_mov_adv)
 
     index_aleatorio = random.randint(0, len(lista_mov_adv)-1)
     op_mov_adv = lista_mov_adv[index_aleatorio]
     movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador)
     turno = 1 - turno
+
+    # verificação de xeque-mate do jogador(está dentro da movimentação do inimigo para não rodar em loop)
+    
+    lista_mov_possiveis_jogador = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_jog, maior_jog, opcao_jogador)
+
+    if(lista_mov_possiveis_jogador is not None):
+      for mov_jogador in lista_mov_possiveis_jogador[:]:
+        if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_jogador[0]][mov_jogador[1]], (mov_jogador[2], mov_jogador[3]), opcao_jogador, turno)):
+          lista_mov_possiveis_jogador.remove(mov_jogador)
+    else:
+      # não tem nenhum movimento disponivel(?)
+      break
+
+    # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
+    if(len(lista_mov_possiveis_jogador) == 0):
+      if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[rei_jog[0]][rei_jog[1]], (0, 0), opcao_jogador, turno)):
+        print("mate")
+      else:
+        print("afogamento")
+      acabou = True
+      break
       
   pygame.display.flip()
 
