@@ -43,7 +43,7 @@ o jogo tem 3 estados: normal, xeque, xeque-mate:
 ->no modo de xeque-mate o jogo acaba
 
 ''' 
-
+import copy
 import os
 import pygame
 import sys
@@ -62,6 +62,13 @@ class Peca:
       self.enpassant = enpassant  
     def __int__(self):
       return self.tipo
+    def copy(self):
+      return Peca(self.tipo, self.pos_in_linha, self.pos_in_col, self.imagem, self.roque, self.enpassant)
+
+rei_preto = ()
+rei_branco = ()
+rei_preto_copia = ()
+rei_branco_copia = ()
 
 # carregando png de cada peça(todas as peças são 70x70)
 # nota: fazer um dicionario com as imagens depois
@@ -122,32 +129,152 @@ def achar_imagem(tipo_peca):
 # macro para limpar tela  
 def limpar_tela():
   os.system('cls' if os.name == 'nt' else 'clear')
+  
+# função para gerar casas (x, y) atacadas pelo inimigo/jogador após movimento
+def casas_atacadas(matrizt, menor_init, maior_init, jogadort):
     
-# função para retornar cor da peça(1 branco 0 preto)
-def cor_peca(peca):
-  if(peca.tipo > 0):
-    return 1
-  else:
-    return 0
+    lista_ataque_inimigo = []
+    for i in range(8):
+      for j in range(8):
+        if(matrizt[i][j] != 0):
+          if(menor_init <= matrizt[i][j].tipo <= maior_init):
+            lista_ataques_peca = gerar_movimentos_possiveis_peca(matrizt, matrizt[i][j], jogadort)  
+            if(lista_ataques_peca is not None):
+              for mov in lista_ataques_peca:
+                # as casas atacadas para a lista de ataque inimigo após a sua movimentação
+                if(not ((abs(matrizt[i][j].tipo) == 1) and (mov[0] != 0))):
+                  lista_ataque_inimigo.append((i+mov[0], j+mov[1]))
+                # se for um avanço de peão, verifica se é possível atacar as diagonais
+                elif(abs(mov[0]) == 1):
+                  mov_atq_peao = [[mov[0], 1],[mov[0], -1]]
+                  for movs in mov_atq_peao:
+                    if(verif_mov_tab(i, j, movs)):
+                      lista_ataque_inimigo.append((i+movs[0], j+movs[1]))
 
+    # algoritmo para tirar casas repetidas
+    lista_ataque_inimigo = list(set(lista_ataque_inimigo))            
+
+    if(len(lista_ataque_inimigo) > 0):
+      print("ataque inimigo:")
+      print(lista_ataque_inimigo)
+      return lista_ataque_inimigo
+    else:
+      return None
+
+# verifica se, após o movimento, o rei está em xeque(caso esteja, anula o movimento), simulando em uma cópia da matriz do jogo 
+def verif_xeque(matrizx, peca_movidax, movx, jogadorx, vez):
+
+  global rei_preto_copia, rei_branco_copia, rei
+  rei_preto_copia = rei_preto
+  rei_branco_copia = rei_branco
+
+  print("\nverificacao de xeque no movimento ", movx, "indices da peca: ", peca_movidax.pos_in_linha, peca_movidax.pos_in_col, "jogador: ", jogadorx, "turno: ", vez, "\n")
+  matriz_copia = []
+  for linha in matrizx:
+      nova_linha = []
+      for item in linha:
+          if isinstance(item, Peca):
+              nova_linha.append(Peca(tipo = item.tipo, pos_in_linha = item.pos_in_linha, pos_in_col = item.pos_in_col, imagem = None, roque = item.roque, enpassant = item.enpassant))
+          else:
+              nova_linha.append(item)  # Para itens que não são peças, copie diretamente
+      matriz_copia.append(nova_linha)
+
+  if(jogadorx == 0):
+    rei_jog = rei_preto_copia
+    rei_ini = rei_branco_copia
+    if(vez != jogadorx):
+      rei = rei_ini
+      menor_inix = -6
+      maior_inix = -1
+    else:
+      rei = rei_jog
+      menor_inix = 1
+      maior_inix = 6
+  else:
+    rei_jog = rei_branco_copia
+    rei_ini = rei_preto_copia
+    if(vez != jogadorx):
+      rei = rei_ini
+      menor_inix = 1
+      maior_inix = 6
+    else:
+      rei = rei_jog
+      menor_inix = -6
+      maior_inix = -1
+
+  # realiza o movimento cogitado através de uma cópia da matriz original
+  movimento_basico_copia(matriz_copia, peca_movidax, movx, jogadorx)
+
+  lista_ataque_oposto = casas_atacadas(matriz_copia, menor_inix, maior_inix, jogadorx)
+
+  print("casa do rei: ", rei)
+
+  for casa in lista_ataque_oposto:
+    if(casa == rei):
+      print("tem xeque")
+      return False
+  print("ta suave")
+  return True
+      
 # função para veririficar se o movimento cogitado está nos limites da matriz(0 a 7) 
 def verif_mov_tab(linha_peca, coluna_peca, mov):
   return 0 <= linha_peca + mov[0] <= 7 and 0 <= coluna_peca + mov[1] <= 7
 
-# inicializção ds variáveis globais rei_branco e rei_preto
-rei_preto = []
-rei_branco = []
+# movimento básico de substituição entre 2 posições em uma matriz cópia(nota: atualizar en passant)
+def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
+    
+  global rei_preto_copia, rei_branco_copia , rei
+  peca_copia = peca_movidab.copy()
 
-# função que retorna True caso a casa não esteja sendo atacada
-def verif_atq_casa(casa_verif, lista_ataque):
-  for casa in lista_ataque:
-    if(casa_verif == casa):
-      return False
-  return True
+  # ve a linha/coluna da peça
+  linha_peca = peca_copia.pos_in_linha
+  coluna_peca = peca_copia.pos_in_col
+
+  # atualiza a nova linha/coluna da peça
+  peca_copia.pos_in_linha = linha_peca+movb[0]
+  peca_copia.pos_in_col = coluna_peca+movb[1]
+
+  # troca a peça de lugar na matriz, deixando o espaço onde ela estava como 0(sem peça na casa)
+  peca_inimiga = matrizb[linha_peca+movb[0]][coluna_peca+movb[1]]
+  matrizb[linha_peca][coluna_peca] = 0
+  matrizb[linha_peca+movb[0]][coluna_peca+movb[1]] = peca_movidab
+
+  # duvida: eu deixo essas condições na matriz cópia???
+
+  # se houve movimento, verifica se o movimento foi de uma torre, nesse caso a possibilidades de roque e grande roque são alteradas(a verificação do rei é feita na função de mov do rei)
+  if(abs(peca_copia.tipo) == 6):
+    peca_movidab.roque = 0
+  elif(abs(peca_copia.tipo) == 2):
+    # como o rei se movimentou, não há mais possibilidade de roque e a sua posição é atualizada
+    peca_copia.roque = 0
+    if(peca_copia.tipo < 0):
+      rei_preto_copia = (linha_peca+movb[0], coluna_peca+movb[1])
+      rei = rei_preto_copia
+    else:
+      rei_branco_copia = (linha_peca+movb[0], coluna_peca+movb[1])
+      rei = rei_branco_copia
+    # se o movimento for um roque, também é feita uma movimentação na torre
+    if(jogadorb == 0):
+      if(movb == [0, 2]):
+        movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca+4], [0, -3], jogadorb)
+      elif(movb == [0, -2]):
+        movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca-3], [0, 2], jogadorb)
+    elif(jogadorb == 1):
+      if(movb == [0, 2]):
+        movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca+3], [0, -2], jogadorb)
+      elif(movb == [0, -2]):
+        movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca-4], [0, 3], jogadorb)
+  elif(abs(peca_movidab.tipo) == 1):
+
+    if(movb == [2,0]) or (movb == [-2,0]):
+      peca_movidab.enpassant = 1
+    elif(movb[1] != 0) and (peca_inimiga == 0):
+      matrizb[linha_peca][coluna_peca+movb[1]] = 0
 
 # movimento básico de substituição entre 2 posições(nota: atualizar en passant)
 def movimento_basico(matriz, peca_movida, mov, jogador):
     
+  global rei_preto, rei_branco
   # ve a linha/coluna da peça
   linha_peca = peca_movida.pos_in_linha
   coluna_peca = peca_movida.pos_in_col
@@ -168,9 +295,9 @@ def movimento_basico(matriz, peca_movida, mov, jogador):
     # como o rei se movimentou, não há mais possibilidade de roque e a sua posição é atualizada
     peca_movida.roque = 0
     if(peca_movida.tipo < 0):
-      rei_preto = [linha_peca+mov[0], coluna_peca+mov[1]]
+      rei_preto = (linha_peca+mov[0], coluna_peca+mov[1])
     else:
-      rei_branco = [linha_peca+mov[0], coluna_peca+mov[1]]
+      rei_branco = (linha_peca+mov[0], coluna_peca+mov[1])
     # se o movimento for um roque, também é feita uma movimentação na torre
     if(jogador == 0):
       if(mov == [0, 2]):
@@ -189,18 +316,39 @@ def movimento_basico(matriz, peca_movida, mov, jogador):
     elif(mov[1] != 0) and (peca_inimiga == 0):
       matriz[linha_peca][coluna_peca+mov[1]] = 0
 
+# gera todos os movimentos possíveis de todas as peças da cor em questão para a IA(formato: [i_peca, j_peca, mov[0], mov[1]])
+def gerar_todos_movimentos_possiveis(matrizg, menor_inig, maior_inig, jogadorg):
+    lista_todos_mov = []
+    for i in range(8):
+      for j in range(8):
+        if(matrizg[i][j] != 0):
+          if(menor_inig <= matrizg[i][j].tipo <= maior_inig):
+            lista_movimentos_peca = gerar_movimentos_possiveis_peca(matrizg, matrizg[i][j], jogadorg)
+            if(lista_movimentos_peca is not None):
+              for mov in lista_movimentos_peca:
+                # adiciona os movimentos possíveis pra a lista de mov adversário
+                lista_todos_mov.append([i, j, mov[0], mov[1]])
+    
+    if(len(lista_todos_mov) > 0):
+      return lista_todos_mov
+    else:
+      return None
+    
+# função para retornar cor da peça(1 branco 0 preto)
+def cor_peca(peca):
+  if(peca.tipo > 0):
+    return 1
+  else:
+    return 0
 
-# gera todos os movimentos possíveis para a peça em questão
-def gerar_movimentos_possiveis(matriz, peca_movida, ataque_inimigo, jogador):
+# gera todos os movimentos possíveis para a peça da cor em questão
+def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador):
     
   # ve a linha/coluna da peça
+  lista_mov_possiveis = []
   linha_peca = peca_movida.pos_in_linha
   coluna_peca = peca_movida.pos_in_col 
   peca_movida = matriz[linha_peca][coluna_peca]
-
-  # inicializa a lista de movimentos possiveis
-  lista_mov_possiveis = []
-
   cor = cor_peca(peca_movida)
 
   if abs(peca_movida.tipo) == 1:      # peão
@@ -304,22 +452,18 @@ def gerar_movimentos_possiveis(matriz, peca_movida, ataque_inimigo, jogador):
 
             if(mov[1] == 2):
               if(matriz[linha_peca][7] != 0) and (abs(matriz[linha_peca][7].tipo) == 6) and (matriz[linha_peca][7].roque == 1) and (matriz[linha_peca][coluna_peca+3] == 0):
-                if(verif_atq_casa((linha_peca, coluna_peca+1), ataque_inimigo)) and (verif_atq_casa((linha_peca, coluna_peca+2), ataque_inimigo)):
-                  lista_mov_possiveis.append(mov)
+                lista_mov_possiveis.append(mov)
             elif(mov[1] == -2):
               if(matriz[linha_peca][0] != 0) and (abs(matriz[linha_peca][0].tipo) == 6) and (matriz[linha_peca][0].roque == 1):
-                if(verif_atq_casa((linha_peca, coluna_peca-1), ataque_inimigo)) and (verif_atq_casa((linha_peca, coluna_peca-2), ataque_inimigo)):
-                  lista_mov_possiveis.append(mov)
+                lista_mov_possiveis.append(mov)
           else:
 
             if(mov[1] == 2):
               if(matriz[linha_peca][7] != 0) and (abs(matriz[linha_peca][7].tipo) == 6) and (matriz[linha_peca][7].roque == 1):
-                if(verif_atq_casa((linha_peca, coluna_peca+1), ataque_inimigo)) and (verif_atq_casa((linha_peca, coluna_peca+2), ataque_inimigo)):
-                  lista_mov_possiveis.append(mov)
+                lista_mov_possiveis.append(mov)
             elif(mov[1] == -2):
               if(matriz[linha_peca][0] != 0) and (abs(matriz[linha_peca][0].tipo) == 6) and (matriz[linha_peca][0].roque == 1) and (matriz[linha_peca][coluna_peca-3] == 0):
-                if(verif_atq_casa((linha_peca, coluna_peca-1), ataque_inimigo)) and (verif_atq_casa((linha_peca, coluna_peca-2), ataque_inimigo)):
-                  lista_mov_possiveis.append(mov)
+                lista_mov_possiveis.append(mov)
 
     # verificação do ataque inimigo
   
@@ -423,8 +567,6 @@ def gerar_movimentos_possiveis(matriz, peca_movida, ataque_inimigo, jogador):
     return lista_mov_possiveis
   else:
     return None
-  
-#################################################################
 
 # menu screen
 pygame.display.set_caption("menu")
@@ -482,9 +624,9 @@ if(opcao_jogador == 0):
                            [ 0,  0,  0,  0,  0,  0,  0,  0],  
                            [-1, -1, -1, -1, -1, -1, -1, -1],  
                            [-6, -5, -4, -2, -3, -4, -5, -6]] 
-  # contém a casa de inicio do rei brnco e do rei preto(importante par verificr cheque etc.)
-  rei_preto = [6, 3]
-  rei_branco = [0, 3]
+  # contém a casa de inicio do rei brnco e do rei preto(importante par verificar cheque etc.)
+  rei_preto = (7, 3)
+  rei_branco = (0, 3)
 else:
   matriz_tabuleiro_int =  [[-6, -5, -4, -3, -2, -4, -5, -6],                               
                            [-1, -1, -1, -1, -1, -1, -1, -1],  
@@ -494,9 +636,9 @@ else:
                            [ 0,  0,  0,  0,  0,  0,  0,  0],  
                            [ 1,  1,  1,  1,  1,  1,  1,  1],  
                            [ 6,  5,  4,  3,  2,  4,  5,  6]]
-  # contém a casa de inicio do rei brnco e do rei preto(importante par verificr cheque etc.)
-  rei_preto = [0, 4]
-  rei_branco = [6, 4]
+  # contém a casa de inicio do rei brnco e do rei preto(importante par verificar cheque etc.)
+  rei_preto = (0, 4)
+  rei_branco = (7, 4)
 
 matriz_tabuleiro_obj = []
 
@@ -517,13 +659,10 @@ tabuleiro_xadrez = pygame.display.set_mode((600, 600))
 
 # contém a peca selecionada e a lista de mov possiveis da peça selecionada pelo jogador
 peca_selecionada = None 
-lista_mov_possiveis = None
-
-# contém a lista de casas atacadas por cada parte do tabuleiro
-lista_ataque_inimigo = []
-lista_ataque_jogador = []
-
+lista_mov_possiveis_jog = []
+lista_mov_adv = []
 turno = 1
+
 while(not acabou):
 
   tabuleiro_xadrez.fill((255,255,255))
@@ -545,57 +684,51 @@ while(not acabou):
         peca = matriz_tabuleiro_obj[i][j]
         tabuleiro_xadrez.blit(peca.imagem, (peca.pos_in_col*75, -73 + 75*(peca.pos_in_linha+1)))
 
-  if peca_selecionada is not None:
+  if len(lista_mov_possiveis_jog) > 0 and len(peca_selecionada) > 0:
+
     pontos = [(peca_selecionada[1] * 75, peca_selecionada[0] * 75),  
               (peca_selecionada[1] * 75 + 75, peca_selecionada[0] * 75),  
               (peca_selecionada[1] * 75 + 75, peca_selecionada[0] * 75 + 75),  
               (peca_selecionada[1] * 75, peca_selecionada[0] * 75 + 75)]
     pygame.draw.polygon(tabuleiro_xadrez, (0 , 0, 0), pontos, 3)
 
-  if lista_mov_possiveis is not None:
-    for mov in lista_mov_possiveis:
+    for mov in lista_mov_possiveis_jog:
       pontos = [((peca_selecionada[1]+mov[1])*75, (peca_selecionada[0]+mov[0])*75),  
                 ((peca_selecionada[1]+mov[1])*75 + 75, (peca_selecionada[0]+mov[0])*75),  
                 ((peca_selecionada[1]+mov[1])*75 + 75, (peca_selecionada[0]+mov[0])*75 + 75),  
                 ((peca_selecionada[1]+mov[1])*75, (peca_selecionada[0]+mov[0])*75 + 75)]
       pygame.draw.polygon(tabuleiro_xadrez, (0 ,0, 0),  pontos, 3)
 
-  for mov in lista_ataque_inimigo:
-    pontos = [(mov[1]*75, mov[0]*75),  
-              (mov[1]*75 + 75, mov[0]*75),  
-              (mov[1]*75 + 75, mov[0]*75 + 75),  
-              (mov[1]*75, mov[0]*75 + 75)]
-    pygame.draw.polygon(tabuleiro_xadrez, (200 ,200, 0),  pontos, 3)
-
-
   if(turno == opcao_jogador):
     for event in pygame.event.get():
     
       if event.type == pygame.MOUSEBUTTONDOWN:
+
         mouse_x, mouse_y = pygame.mouse.get_pos()
         peca_movida_linha = int(mouse_y/75)
         peca_movida_coluna = int(mouse_x/75)
         peca_selecionada = [peca_movida_linha, peca_movida_coluna]
 
-        if(opcao_jogador == 0):
-          rei_jog = rei_preto
-        else:
-          rei_jog = rei_branco
-
-        for casa in lista_ataque_inimigo:
-          if(casa == rei_jog):
-          #lidar com o xeque
-            xeque = 1
+        #lista_mov_possiveis_jog_total = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_ini, maior_ini, opcao_jogador) adicionar mate no adversàrio!!!
+        lista_mov_possiveis_jog = []
 
         if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
           if((opcao_jogador == 1) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo > 0)) or ((opcao_jogador == 0) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo < 0)):
-            lista_mov_possiveis = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], lista_ataque_inimigo, opcao_jogador)
+            lista_mov_possiveis_jog = gerar_movimentos_possiveis_peca(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], opcao_jogador)
+            if(lista_mov_possiveis_jog is not None):
+              for mov_jog in lista_mov_possiveis_jog[:]:
+                if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], (mov_jog[0], mov_jog[1]), opcao_jogador, turno)):
+                  lista_mov_possiveis_jog.remove(mov_jog)
+                  print("remove mov", mov_jog)
+            else:
+              lista_mov_possiveis_jog = []
+              peca_selecionada = []
           else:
-            lista_mov_possiveis = None
-            peca_selecionada = None
+            lista_mov_possiveis_jog = []
+            peca_selecionada = []
         else:
-          lista_mov_possiveis = None
-          peca_selecionada = None
+          lista_mov_possiveis_jog = []
+          peca_selecionada = []
 
       elif event.type == pygame.MOUSEBUTTONUP:
         
@@ -605,25 +738,28 @@ while(not acabou):
         coluna_casa = int(mouse_x/75)
         movimento_ate_casa = [linha_casa-peca_movida_linha, coluna_casa-peca_movida_coluna]
 
-        if lista_mov_possiveis is not None:
-          for mov in lista_mov_possiveis:
-            if(mov == movimento_ate_casa):
+        if lista_mov_possiveis_jog is not None:
+          print("movs restantes:", lista_mov_possiveis_jog)
+          for op_mov_jog in lista_mov_possiveis_jog:
+            if(op_mov_jog == movimento_ate_casa):
               pode_movimentar = 1
               break
           
         if(pode_movimentar):
-          movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
-          lista_ataque_inimigo = []
-          turno = 1 - turno
+            movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
+            turno = 1 - turno
 
-        peca_selecionada = None
-        lista_mov_possiveis = None
+        peca_selecionada = []
+        lista_mov_possiveis = []
       
       elif event.type == pygame.QUIT:
         acabou = True
 
   else:
 
+    lista_mov_adv = []
+
+    # ve quais são os valores da peça adversária e o rei adversário
     if(opcao_jogador == 0):
       menor_ini = 1
       maior_ini = 6
@@ -633,56 +769,32 @@ while(not acabou):
       maior_ini = -1
       rei_ini = rei_preto
 
-    lista_mov_adv = []
+    # gera todos os movimentos possiveis para todas as peças da IA e seleciona um aleatoriamente
+    lista_mov_adv = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_ini, maior_ini, opcao_jogador)
 
-    # geração dos movimentos possíveis pelo adversário
-    for i in range(8):
-      for j in range(8):
-        if(matriz_tabuleiro_obj[i][j] != 0):
-          if(menor_ini <= matriz_tabuleiro_obj[i][j].tipo <= maior_ini):
-            lista_ataques_peca = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[i][j], lista_ataque_jogador, opcao_jogador)
-            if(lista_ataques_peca is not None):
-              for mov in lista_ataques_peca:
-                # adiciona os movimentos possíveis pra a lista de mov adversário
-                lista_mov_adv.append([i, j, mov[0], mov[1]])
+    print("movs iniciais:", lista_mov_adv)
+    if(lista_mov_adv is not None):
+      for mov_adv in lista_mov_adv[:]:
+        if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_adv[0]][mov_adv[1]], (mov_adv[2], mov_adv[3]), opcao_jogador, turno)):
+          lista_mov_adv.remove(mov_adv)
+          print("remove mov", mov_adv)
+    else:
+      print("nao tem mov")
+      break
     
+    # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
+    if(len(lista_mov_adv) == 0):
+      print("matee")
+      acabou = True
+      break
 
-    print(lista_mov_adv)
-    
-    for casa in lista_ataque_jogador:
-      if(casa == rei_ini):
-        #lidar com o xeque
-        xeque = 1
+    print("movs restantes:", lista_mov_adv)
 
     index_aleatorio = random.randint(0, len(lista_mov_adv)-1)
-    mov_adv = lista_mov_adv[index_aleatorio]
-    
-    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_adv[0]][mov_adv[1]], [mov_adv[2], mov_adv[3]], opcao_jogador)
-
-    # geração das casas atacadas pelo inimigo após movimento
-    for i in range(8):
-      for j in range(8):
-        if(matriz_tabuleiro_obj[i][j] != 0):
-          if(menor_ini <= matriz_tabuleiro_obj[i][j].tipo <= maior_ini):
-            lista_ataques_peca = gerar_movimentos_possiveis(matriz_tabuleiro_obj, matriz_tabuleiro_obj[i][j], lista_ataque_jogador, opcao_jogador)
-            if(lista_ataques_peca is not None):
-              for mov in lista_ataques_peca:
-                # as casas atacadas para a lista de ataque inimigo após a sua mvimentação
-                if(not ((abs(matriz_tabuleiro_obj[i][j].tipo) == 1) and (mov[0] != 0))):
-                  lista_ataque_inimigo.append((i+mov[0], j+mov[1]))
-                # se for um avanço de peão, verifica se é possível atacar as diagonais
-                elif(mov[0] == 1):
-                  mov_atq_peao = [[mov[0], 1],[mov[0], -1]]
-                  for mov in mov_atq_peao:
-                    if(verif_mov_tab(i, j, mov)):
-                      lista_ataque_inimigo.append((i+mov[0], j+mov[1]))
-
-    # algoritmo para tirar casas repetidas
-    lista_ataque_inimigo = list(set(lista_ataque_inimigo))
-    print(lista_ataque_inimigo)
-
+    op_mov_adv = lista_mov_adv[index_aleatorio]
+    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador)
     turno = 1 - turno
-
+      
   pygame.display.flip()
 
 pygame.quit()
