@@ -277,7 +277,7 @@ def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
 # movimento básico de substituição entre 2 posições(nota: atualizar en passant)
 def movimento_basico(matriz, peca_movida, mov, jogador):
     
-  global rei_preto, rei_branco
+  global rei_preto, rei_branco, verif_enpassant
   # ve a linha/coluna da peça
   linha_peca = peca_movida.pos_in_linha
   coluna_peca = peca_movida.pos_in_col
@@ -666,10 +666,12 @@ pygame.display.set_caption("chess")
 acabou = False
 tabuleiro_xadrez = pygame.display.set_mode((600, 600))
 
-# contém a peca selecionada e a lista de mov possiveis da peça selecionada pelo jogador
+# contém a peca selecionada, a lista de mov possiveis da peça selecionada pelo jogador, a posição das peças movimentadas pelo adversário e o jogador e o turno do jogo
 peca_selecionada = None 
 lista_mov_possiveis_jog = []
 lista_mov_adv = []
+peca_movida_jog = [0, 0]
+peca_movida_adv = [0, 0]
 turno = 1
 
 while(not acabou):
@@ -761,7 +763,15 @@ while(not acabou):
             print("mov final jogador:")
             print(op_mov_jog)
             movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
+            peca_movida_jog = [peca_movida_linha+movimento_ate_casa[0], peca_movida_coluna+movimento_ate_casa[1]]
+
+            # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
+            if(matriz_tabuleiro_obj[peca_movida_adv[0]][peca_movida_adv[1]] != 0):
+              matriz_tabuleiro_obj[peca_movida_adv[0]][peca_movida_adv[1]].enpassant = 0
+
             turno = 1 - turno
+            
+
 
         peca_selecionada = []
         lista_mov_possiveis = []
@@ -800,12 +810,9 @@ while(not acabou):
           lista_mov_adv.remove(mov_adv)
           print("mov adv removido:")
           print(mov_adv)
-    else:
-      # não tem nenhum movimento disponível(?)
-      break
     
     # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
-    if(len(lista_mov_adv) == 0):
+    if(lista_mov_adv is None or len(lista_mov_adv) == 0):
       if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[rei_ini[0]][rei_ini[1]], (0, 0), opcao_jogador, turno)):
         print("mate no adv")
       else:
@@ -818,6 +825,11 @@ while(not acabou):
     print("mov final adv:")
     print(op_mov_adv)
     movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador)
+    peca_movida_adv = [op_mov_adv[0]+op_mov_adv[2], op_mov_adv[1]+op_mov_adv[3]] 
+
+    # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
+    if(matriz_tabuleiro_obj[peca_movida_jog[0]][peca_movida_jog[1]] != 0):
+      matriz_tabuleiro_obj[peca_movida_jog[0]][peca_movida_jog[1]].enpassant = 0
     turno = 1 - turno
 
     # verificação de xeque-mate do jogador(está dentro da movimentação do inimigo para não rodar em loop)
@@ -832,12 +844,9 @@ while(not acabou):
           lista_mov_possiveis_jogador.remove(mov_jogador)
           print("mov removido(proxima rodada):")
           print(mov_jogador)
-    else:
-      # não tem nenhum movimento disponivel(?)
-      break
 
     # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
-    if(len(lista_mov_possiveis_jogador) == 0):
+    if(lista_mov_possiveis_jogador is None or len(lista_mov_possiveis_jogador) == 0):
       if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[rei_jog[0]][rei_jog[1]], (0, 0), opcao_jogador, turno)):
         print("mate no jog")
       else:
