@@ -11,8 +11,8 @@ TABULEIRO : matriz de objetos
   0,  0,  0,  0,  0,  0,  0,  0,  
   1,  1,  1,  1,  1,  1,  1,  1,  
   6,  5,  4,  3,  2,  4,  5,  6,  
-
-a matriz serve apenas para visualização, cada peça é um objeto de uma classe denominada Peça
+  
+cada peça é um objeto de uma classe denominada Peça ou 0, se a casa estiver vazia
 
 atributos de cada objeto:
 
@@ -27,9 +27,8 @@ atributos de cada objeto:
 
 4)roque e en passant: atributos para ajudar na programação dessas 2 regras
 ->se a torre e o rei ainda não tiverem se mexido, o valor de roque deles é igual a 1, ou seja, eles podem rocar, caso o contrário é igual a 0
-->se o peão mover 2 casas para frente, naquele momento o seu valor de en passant passa a valer 1 e , se tiver um peão inimigo ao seu lado, ele pode comer e após o movimento do adversário, o valor de en passant volta a ser 0 para tal peão
-
-5)promoção: se um peão chegar na última fileira, seu valor de promoção vale 1 e o programa fornece uma escolha de peça para promover
+->se o peão mover 2 casas para frente, naquele momento o seu valor de en passant passa a valer 1 e , se tiver um peão inimigo ao seu lado, ele pode comê-lo. 
+  O valor de en passant volta a ser 0 após o movimento do adversário
 
 formato do movimento: [(ind. final linha - ind. inicial linha) , (ind. final coluna - ind. final coluna)]
 ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimento deve ser [0,1]
@@ -37,10 +36,26 @@ ex: se temos uma peça na posição [6,2] e queremos mover para [6,3], o movimen
 cada peça tem uma lista de movimentos possíveis
 ex: rei , pode se mover 1 casa em qualquer direção, logo sua lista de movimentos possíveis inicial é [[0,1], [0,-1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
 
-o jogo tem 3 estados: normal, xeque, xeque-mate:
+lógica de movimentação do jogador:
+O jogador vai selecionar uma peça, e para aquela peça, o programa vai gerar todos os movimentos possíveis, considerando os xeques inimigos e a movimentação da peça escolhida, para o jogador escolher.
+Caso o jogador escolha um movimento inválido, ele não é executado e o loop continua até o jogador fazer um movimento válido
+
+lógica de movimentação do adversário(PC):
+Ao invés de gerar os movimentos possíveis para somente uma peça, o programa vai gerar os movimentos possíveis de todas as peças, considerando os xeques inimigos e a movimentação da peça escolhida, e escolher um deles 
+
+lógica de verificação do xeque:
+Para verificar se o rei está em xeque, o programa verifica, para cada peça que o jogador escolhe fazer o movimento, se os movimentos daquelas peças irão acarretar no ataque do seu próprio rei.
+Por exemplo: se o adversário fez um ataque de xeque e o jogador não ver e tentar mover um peão da outra ala que não interfira na jogada, ele não vai conseguir porque independente do movimento daquele peão o rei estará atacado
+essa lógica é útil principalmente em casos que o jogador quer mover uma peça, mas ela deixaria o rei atacado(peça cravada)
+
+lógica de verificação do xeque_mate:
+O programa irá gerar todos os movimentos possíveis do jogador considerando o xeque, e caso a lista esteja vazia, é porque empatou ou foi xeque-mate, então é feita uma verificação para ver se o rei está em xeque para decidir o resultado
+
+o jogo tem 4 estados: normal, xeque, xeque-mate, empate:
 ->no modo normal é permitido realizar qualquer movimento desde que ele seja válido
 ->no modo de xeque o jogador precisa fazer uma jogada que bloqueie o ataque adversário
-->no modo de xeque-mate o jogo acaba
+->no modo de xeque-mate o jogo acaba com a vitória de um dos lados
+->no modo de empate o jogo acaba com o empate
 
 ''' 
 
@@ -264,9 +279,10 @@ def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
       elif(movb == [0, -2]):
         movimento_basico_copia(matrizb, matrizb[linha_peca][coluna_peca-4], [0, 3], jogadorb)
   elif(abs(peca_copia.tipo) == 1):
-    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo
+    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo(nesse caso de verificação da IA, só considera ele virando rainha)
     if(peca_copia.pos_in_linha == 0) or (peca_copia.pos_in_linha == 7):
-      promocao_peao(peca_copia, cor_peca(peca_copia))
+      peca_copia.tipo == peca_copia.tipo*3 
+      peca_copia.imagem = achar_imagem(peca_copia.tipo)
     # atualiza en passant se o primeiro movimento for 2 casa para frente
     if(movb == [2,0]) or (movb == [-2,0]):
       peca_copia.enpassant = 1
@@ -275,7 +291,7 @@ def movimento_basico_copia(matrizb, peca_movidab, movb, jogadorb):
       matrizb[linha_peca][coluna_peca+movb[1]] = 0
 
 # movimento básico de substituição entre 2 posições(nota: atualizar en passant)
-def movimento_basico(matriz, peca_movida, mov, jogador):
+def movimento_basico(matriz, peca_movida, mov, jogador, vez_jog):
     
   global rei_preto, rei_branco, verif_enpassant
   # ve a linha/coluna da peça
@@ -304,19 +320,22 @@ def movimento_basico(matriz, peca_movida, mov, jogador):
     # se o movimento for um roque, também é feita uma movimentação na torre
     if(jogador == 0):
       if(mov == [0, 2]):
-        movimento_basico(matriz, matriz[linha_peca][coluna_peca+4], [0, -3], jogador)
+        movimento_basico(matriz, matriz[linha_peca][coluna_peca+4], [0, -3], jogador, vez_jog)
       elif(mov == [0, -2]):
-        movimento_basico(matriz, matriz[linha_peca][coluna_peca-3], [0, 2], jogador)
+        movimento_basico(matriz, matriz[linha_peca][coluna_peca-3], [0, 2], jogador, vez_jog)
     elif(jogador == 1):
       if(mov == [0, 2]):
-        movimento_basico(matriz, matriz[linha_peca][coluna_peca+3], [0, -2], jogador)
+        movimento_basico(matriz, matriz[linha_peca][coluna_peca+3], [0, -2], jogador, vez_jog)
       elif(mov == [0, -2]):
-        movimento_basico(matriz, matriz[linha_peca][coluna_peca-4], [0, 3], jogador)
+        movimento_basico(matriz, matriz[linha_peca][coluna_peca-4], [0, 3], jogador, vez_jog)
   elif(abs(peca_movida.tipo) == 1):
 
-    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo
+    # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo baseado em um input, caso seja a IA ela escolhe
     if(peca_movida.pos_in_linha == 0) or (peca_movida.pos_in_linha == 7):
-      promocao_peao(peca_movida, cor_peca(peca_movida))
+      if(jogador == vez_jog):
+        promocao_peao(peca_movida, cor_peca(peca_movida))
+      else:
+        promocao_peao_IA(matriz, peca_movida, cor_peca(peca_movida))
     # atualiza en passant se o primeiro movimento for 2 casa para frente
     if(mov == [2,0]) or (mov == [-2,0]):
       peca_movida.enpassant = 1
@@ -574,9 +593,28 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador, vez_jog, verif
     return None
   
 def promocao_peao(peao, cor_do_peao):
-  peao.tipo = cor_do_peao*3
-  peao.imagem = achar_imagem(peao.tipo)
 
+  print("promoção!!")
+  print("escolha a peça que voce quer promover o peão:")
+  print("3 rainha, 4 bispo, 5 cavalo, 6 torre")
+  escolha_promocao = int(input())
+
+  while(True):
+
+    if(3 <=escolha_promocao <= 6):
+      peao.tipo = peao.tipo*escolha_promocao
+      peao.imagem = achar_imagem(peao.tipo)
+      return 
+    else:
+      print("valor inválido! digite outro:")
+      escolha_promocao = int(input())
+
+def promocao_peao_IA(matrizp, peaop, corp):
+  escolha_IA = 3
+  peaop.tipo = peaop.tipo*escolha_IA
+  peaop.imagem = achar_imagem(peaop.tipo)
+
+  
 # menu screen
 pygame.display.set_caption("menu")
 menu = pygame.display.set_mode((600, 600))
@@ -723,6 +761,8 @@ while(not acabou):
 
         lista_mov_possiveis_jog = []
 
+        # verifica todos os movimentos válidos para a peça escolhida pelo jogador
+
         if(matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna] != 0):
           if((opcao_jogador == 1) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo > 0)) or ((opcao_jogador == 0) and (matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna].tipo < 0)):
             lista_mov_possiveis_jog = gerar_movimentos_possiveis_peca(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], opcao_jogador, turno, 0)
@@ -762,7 +802,7 @@ while(not acabou):
         if(pode_movimentar):
             print("mov final jogador:")
             print(op_mov_jog)
-            movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador)
+            movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador, turno)
             peca_movida_jog = [peca_movida_linha+movimento_ate_casa[0], peca_movida_coluna+movimento_ate_casa[1]]
 
             # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
@@ -824,7 +864,7 @@ while(not acabou):
     op_mov_adv = lista_mov_adv[index_aleatorio]
     print("mov final adv:")
     print(op_mov_adv)
-    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador)
+    movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador, turno)
     peca_movida_adv = [op_mov_adv[0]+op_mov_adv[2], op_mov_adv[1]+op_mov_adv[3]] 
 
     # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
