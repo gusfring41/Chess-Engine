@@ -232,7 +232,6 @@ def verif_xeque(matrizx, peca_movidax, movx, jogadorx, vez):
 
   for casa in lista_ataque_oposto:
     if(casa == rei):
-      print("o rei está atacado com esse movimento, posição do rei: ", rei)
       return False
   return True
 
@@ -333,9 +332,9 @@ def movimento_basico(matriz, peca_movida, mov, jogador, vez_jog):
     # o peão só alcança essas linhas em caso de promoção,e quando alcançar troca a sua imagem e seu tipo baseado em um input, caso seja a IA ela escolhe
     if(peca_movida.pos_in_linha == 0) or (peca_movida.pos_in_linha == 7):
       if(jogador == vez_jog):
-        promocao_peao(peca_movida, cor_peca(peca_movida))
+        promocao_peao(peca_movida)
       else:
-        promocao_peao_IA(matriz, peca_movida, cor_peca(peca_movida))
+        promocao_peao_IA(matriz, peca_movida)
     # atualiza en passant se o primeiro movimento for 2 casa para frente
     if(mov == [2,0]) or (mov == [-2,0]):
       peca_movida.enpassant = 1
@@ -592,7 +591,7 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador, vez_jog, verif
   else:
     return None
   
-def promocao_peao(peao, cor_do_peao):
+def promocao_peao(peao):
 
   print("promoção!!")
   print("escolha a peça que voce quer promover o peão:")
@@ -609,12 +608,113 @@ def promocao_peao(peao, cor_do_peao):
       print("valor inválido! digite outro:")
       escolha_promocao = int(input())
 
-def promocao_peao_IA(matrizp, peaop, corp):
+def promocao_peao_IA(matrizp, peaop):
   escolha_IA = 3
   peaop.tipo = peaop.tipo*escolha_IA
   peaop.imagem = achar_imagem(peaop.tipo)
 
+def avaliar_posição(matriz_av, peca_movida_av, mov_av, jogador_av):
+
+  valor_posicao = 0
+  matriz_copia_av = []
+  for linha in matriz_av:
+      nova_linha = []
+      for item in linha:
+          if isinstance(item, Peca):
+              nova_linha.append(Peca(tipo = item.tipo, pos_in_linha = item.pos_in_linha, pos_in_col = item.pos_in_col, imagem = item.imagem, roque = item.roque, enpassant = item.enpassant))
+          else:
+              nova_linha.append(item)  # Para itens que não são peças, copie diretamente
+      matriz_copia_av.append(nova_linha)
+
+  movimento_basico_copia(matriz_copia_av, peca_movida_av, mov_av, jogador_av)
+
+  for i in range(8):
+    for j in range(8):
+      if(matriz_copia_av[i][j] != 0):
+        if(abs(matriz_copia_av[i][j].tipo) == 1):
+          valor_posicao += avaliar_peao(matriz_copia_av[i][j], jogador_av)
+        elif(abs(matriz_copia_av[i][j].tipo) == 2):
+          valor_posicao += avaliar_rei(matriz_copia_av[i][j], jogador_av)
+        elif(abs(matriz_copia_av[i][j].tipo) == 3):
+          valor_posicao += avaliar_pecas_menores(matriz_copia_av[i][j], jogador_av)
+        elif(abs(matriz_copia_av[i][j].tipo) == 4):
+          valor_posicao += avaliar_pecas_menores(matriz_copia_av[i][j], jogador_av)
+        elif(abs(matriz_copia_av[i][j].tipo) == 5):
+          valor_posicao += avaliar_pecas_menores(matriz_copia_av[i][j], jogador_av)
+        elif(abs(matriz_copia_av[i][j].tipo) == 6):
+          valor_posicao += avaliar_pecas_menores(matriz_copia_av[i][j], jogador_av)
+
+  return valor_posicao
+
+def avaliar_peao(peao_av, jogador_av): 
+
+  if(peao_av.tipo < 0):
+    mult = -1
+  else:
+    mult = 1
+
+  valor_peao = 1*mult
   
+  matriz_avaliacao_peao = [[   0,    0,    0,    0,    0,    0,    0,    0],                               
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [ 0.1,  0.2,  0.3,  0.4,  0.4,  0.3,  0.2,  0.1],  
+                           [ 0.2,  0.3,  0.4,  0.5,  0.5,  0.4,  0.3,  0.2],  
+                           [ 0.3,  0.4,  0.5,  0.6,  0.6,  0.5,  0.4,  0.3],  
+                           [ 0.4,  0.5,  0.6,  0.7,  0.7,  0.6,  0.5,  0.4],  
+                           [ 0.5,  0.6,  0.7,  0.8,  0.8,  0.7,  0.6,  0.5],  
+                           [   9,    9,    9,    9,    9,    9,    9,    9]]
+  if(jogador_av == 0):
+    matriz_avaliacao_peao = matriz_avaliacao_peao[::-1]
+
+  return valor_peao + matriz_avaliacao_peao[peao_av.pos_in_linha][peao_av.pos_in_col]*mult
+
+def avaliar_rei(rei_av, jogador_av): 
+
+  if(rei_av.tipo < 0):
+    mult = -1
+  else:
+    mult = 1
+  
+  matriz_avaliacao_rei =  [[   1,    1,  0.5,    0,    0,  0.5,    1,    1],                               
+                           [   0,  0.5,    0,    0,    0,    0,  0.5,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0],  
+                           [   0,    0,    0,    0,    0,    0,    0,    0]]
+  if(jogador_av == 0):
+    matriz_avaliacao_rei = matriz_avaliacao_rei[::-1]
+
+  return matriz_avaliacao_rei[rei_av.pos_in_linha][rei_av.pos_in_col]*mult
+  
+def avaliar_pecas_menores(peca_menor_av, jogador_av):
+
+  if(peca_menor_av.tipo < 0):
+    mult = -1
+  else:
+    mult = 1
+
+  if(abs(peca_menor_av.tipo) == 3):
+    valor_peca_menor_av = 9*mult
+  elif(abs(peca_menor_av.tipo) == 4):
+    valor_peca_menor_av = 3*mult
+  elif(abs(peca_menor_av.tipo) == 5):
+    valor_peca_menor_av = 3*mult
+  elif(abs(peca_menor_av.tipo) == 6):
+    valor_peca_menor_av = 5*mult
+
+  matriz_avaliacao_peca_menor =[[   0,    0,    0,    0,    0,    0,    0,    0],                               
+                                [ 0.1,  0.2,  0.2,  0.3,  0.3,  0.2,  0.2,  0.1],  
+                                [ 0.1,  0.2,  0.3,  0.4,  0.4,  0.3,  0.2,  0.1],  
+                                [ 0.2,  0.3,  0.4,  0.5,  0.5,  0.4,  0.3,  0.2],  
+                                [ 0.2,  0.3,  0.4,  0.5,  0.5,  0.4,  0.3,  0.2],  
+                                [ 0.1,  0.2,  0.3,  0.4,  0.4,  0.3,  0.2,  0.1],  
+                                [ 0.1,  0.2,  0.2,  0.3,  0.3,  0.2,  0.2,  0.1],  
+                                [   0,    0,    0,    0,    0,    0,    0,    0]]
+  
+  return valor_peca_menor_av + matriz_avaliacao_peca_menor[peca_menor_av.pos_in_linha][peca_menor_av.pos_in_col]*mult
+
 # menu screen
 pygame.display.set_caption("menu")
 menu = pygame.display.set_mode((600, 600))
@@ -770,8 +870,6 @@ while(not acabou):
               for mov_jog in lista_mov_possiveis_jog[:]:
                 if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], (mov_jog[0], mov_jog[1]), opcao_jogador, turno)):
                   lista_mov_possiveis_jog.remove(mov_jog)
-                  print("mov removido jog:")
-                  print(mov_jog)
             else:
               lista_mov_possiveis_jog = []
               peca_selecionada = []
@@ -784,9 +882,6 @@ while(not acabou):
 
       elif event.type == pygame.MOUSEBUTTONUP:
 
-        print("lista de moves possiveis jog:")
-        print(lista_mov_possiveis_jog)
-        
         pode_movimentar = False
         mouse_x, mouse_y = pygame.mouse.get_pos()
         linha_casa = int(mouse_y/75)
@@ -800,8 +895,6 @@ while(not acabou):
               break
           
         if(pode_movimentar):
-            print("mov final jogador:")
-            print(op_mov_jog)
             movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[peca_movida_linha][peca_movida_coluna], movimento_ate_casa, opcao_jogador, turno)
             peca_movida_jog = [peca_movida_linha+movimento_ate_casa[0], peca_movida_coluna+movimento_ate_casa[1]]
 
@@ -810,8 +903,6 @@ while(not acabou):
               matriz_tabuleiro_obj[peca_movida_adv[0]][peca_movida_adv[1]].enpassant = 0
 
             turno = 1 - turno
-            
-
 
         peca_selecionada = []
         lista_mov_possiveis = []
@@ -841,15 +932,11 @@ while(not acabou):
 
     # gera todos os movimentos possiveis para todas as peças da IA e seleciona um aleatoriamente
     lista_mov_adv = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_ini, maior_ini, opcao_jogador, turno)
-    print("lista de moves possiveis adv(desconsiderando xeque):")
-    print(lista_mov_adv)
 
     if(lista_mov_adv is not None):
       for mov_adv in lista_mov_adv[:]:
         if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_adv[0]][mov_adv[1]], (mov_adv[2], mov_adv[3]), opcao_jogador, turno)):
           lista_mov_adv.remove(mov_adv)
-          print("mov adv removido:")
-          print(mov_adv)
     
     # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
     if(lista_mov_adv is None or len(lista_mov_adv) == 0):
@@ -859,31 +946,37 @@ while(not acabou):
         print("afogamento")
       acabou = True
       break
+    
+    # pega todos os movimentos possíveis e avalia o melhor a ser jogado
+    lista_melhores_movs = []
+    for i in range (len(lista_mov_adv)):
+      mov = lista_mov_adv[i]
+      total_pos = avaliar_posição(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov[0]][mov[1]], (mov[2], mov[3]), opcao_jogador)
+      lista_melhores_movs.append([total_pos, i])
 
-    index_aleatorio = random.randint(0, len(lista_mov_adv)-1)
-    op_mov_adv = lista_mov_adv[index_aleatorio]
-    print("mov final adv:")
-    print(op_mov_adv)
+    if(opcao_jogador == 0):
+      melhor_movimento = max(lista_melhores_movs, key = lambda x: x[0])
+    else:
+      melhor_movimento = min(lista_melhores_movs, key = lambda x: x[0])
+    op_mov_adv = lista_mov_adv[melhor_movimento[1]]
     movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador, turno)
     peca_movida_adv = [op_mov_adv[0]+op_mov_adv[2], op_mov_adv[1]+op_mov_adv[3]] 
+
+    print("avaliação da posição: ", melhor_movimento[0])
 
     # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
     if(matriz_tabuleiro_obj[peca_movida_jog[0]][peca_movida_jog[1]] != 0):
       matriz_tabuleiro_obj[peca_movida_jog[0]][peca_movida_jog[1]].enpassant = 0
     turno = 1 - turno
 
-    # verificação de xeque-mate do jogador(está dentro da movimentação do inimigo para não rodar em loop)
+    # verificação de xeque-mate do jogador(está dentro da movimentação do inimigo para não rodar em loop na movimentação do jogador)
     
     lista_mov_possiveis_jogador = gerar_todos_movimentos_possiveis(matriz_tabuleiro_obj, menor_jog, maior_jog, opcao_jogador, turno)
-    print("movs possiveis jogador(proxima rodada)(considerando xeque somente no roque):")
-    print(lista_mov_possiveis_jogador)
 
     if(lista_mov_possiveis_jogador is not None):
       for mov_jogador in lista_mov_possiveis_jogador[:]:
         if(not verif_xeque(matriz_tabuleiro_obj, matriz_tabuleiro_obj[mov_jogador[0]][mov_jogador[1]], (mov_jogador[2], mov_jogador[3]), opcao_jogador, turno)):
           lista_mov_possiveis_jogador.remove(mov_jogador)
-          print("mov removido(proxima rodada):")
-          print(mov_jogador)
 
     # verifica após a remoção dos movimentos com xeque se ainda tem movimento, se não tiver o rei tomo xeque-mate ou foi afogado(empate)
     if(lista_mov_possiveis_jogador is None or len(lista_mov_possiveis_jogador) == 0):
