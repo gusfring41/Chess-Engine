@@ -10,7 +10,7 @@ pip install -r requirements.txt
 ```
 And then run the main file
 ```bash
-python main.py
+python chess_main.py
 ```
 ## Authors
 Gustavo Alves ([@gusfring41](https://github.com/gusfring41))  
