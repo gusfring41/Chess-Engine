@@ -470,23 +470,19 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador, vez_jog, verif
               if(mov_roq[1] == 2):
                 if(matriz[linha_peca][7] != 0) and (abs(matriz[linha_peca][7].tipo) == 6) and (matriz[linha_peca][7].roque == 1) and (matriz[linha_peca][coluna_peca+3] == 0):
                   if(verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 0), jogador, vez_jog)) and (verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 1), jogador, vez_jog)):
-                    print("roque grande adicionado, o rei do", jogador, vez_jog,"esta tranquilo nessas casa", linha_peca, coluna_peca, linha_peca, coluna_peca+1)
                     lista_mov_possiveis.append(mov_roq)
               elif(mov_roq[1] == -2):
                 if(matriz[linha_peca][0] != 0) and (abs(matriz[linha_peca][0].tipo) == 6) and (matriz[linha_peca][0].roque == 1):
                   if(verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 0), jogador, vez_jog)) and (verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, -1), jogador, vez_jog)):
-                    print("roque pequeno adicionado, o rei do", jogador, vez_jog,"esta tranquilo nessas casas", linha_peca, coluna_peca, linha_peca, coluna_peca-1)
                     lista_mov_possiveis.append(mov_roq)
             else:
               if(mov_roq[1] == 2):
                 if(matriz[linha_peca][7] != 0) and (abs(matriz[linha_peca][7].tipo) == 6) and (matriz[linha_peca][7].roque == 1):
                   if(verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 0), jogador, vez_jog)) and (verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 1), jogador, vez_jog)):
-                    print("roque pequeno adicionado, o rei do", jogador, vez_jog,"esta tranquilo nessas casas", linha_peca, coluna_peca, linha_peca, coluna_peca+1)
                     lista_mov_possiveis.append(mov_roq)
               elif(mov_roq[1] == -2):
                 if(matriz[linha_peca][0] != 0) and (abs(matriz[linha_peca][0].tipo) == 6) and (matriz[linha_peca][0].roque == 1) and (matriz[linha_peca][coluna_peca-3] == 0):
                   if(verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, 0), jogador, vez_jog)) and (verif_xeque(matriz, matriz[linha_peca][coluna_peca], (0, -1), jogador, vez_jog)):
-                    print("roque grande adicionado, o rei do", jogador, vez_jog,"esta tranquilo nessas casas", linha_peca, coluna_peca, linha_peca, coluna_peca-1)
                     lista_mov_possiveis.append(mov_roq)
   
   elif abs(peca_movida.tipo) == 3:        # rainha
@@ -590,6 +586,7 @@ def gerar_movimentos_possiveis_peca(matriz, peca_movida, jogador, vez_jog, verif
   else:
     return None
   
+# promove o peão a partir de um input do terminal
 def promocao_peao(peao):
 
   print("promoção!!")
@@ -607,11 +604,13 @@ def promocao_peao(peao):
       print("valor inválido! digite outro:")
       escolha_promocao = int(input())
 
+# promove o peão da IA a partir de uma tomada de decisão(atualmente só promove pra dama direto)
 def promocao_peao_IA(matrizp, peaop):
   escolha_IA = 3
   peaop.tipo = peaop.tipo*escolha_IA
   peaop.imagem = achar_imagem(peaop.tipo)
 
+# gera a avaliação da posição pra decidir o melhor movimento
 def avaliar_posição(matriz_av, peca_movida_av, mov_av, jogador_av):
 
   valor_posicao = 0
@@ -645,6 +644,7 @@ def avaliar_posição(matriz_av, peca_movida_av, mov_av, jogador_av):
 
   return valor_posicao
 
+# gera a avaliação da posição do peão
 def avaliar_peao(peao_av, jogador_av): 
 
   if(peao_av.tipo < 0):
@@ -667,6 +667,7 @@ def avaliar_peao(peao_av, jogador_av):
 
   return valor_peao + matriz_avaliacao_peao[peao_av.pos_in_linha][peao_av.pos_in_col]*mult
 
+# gera a avaliação da posição do peão
 def avaliar_rei(rei_av, jogador_av): 
 
   if(rei_av.tipo < 0):
@@ -687,6 +688,7 @@ def avaliar_rei(rei_av, jogador_av):
 
   return matriz_avaliacao_rei[rei_av.pos_in_linha][rei_av.pos_in_col]*mult
   
+# gera a avaliação da posição das peças menores(futuramente terá uma matriz de avaliação para cada peça)
 def avaliar_pecas_menores(peca_menor_av, jogador_av):
 
   if(peca_menor_av.tipo < 0):
@@ -960,8 +962,6 @@ while(not acabou):
     op_mov_adv = lista_mov_adv[melhor_movimento[1]]
     movimento_basico(matriz_tabuleiro_obj, matriz_tabuleiro_obj[op_mov_adv[0]][op_mov_adv[1]], [op_mov_adv[2], op_mov_adv[3]], opcao_jogador, turno)
     peca_movida_adv = [op_mov_adv[0]+op_mov_adv[2], op_mov_adv[1]+op_mov_adv[3]] 
-
-    print("avaliação da posição: ", melhor_movimento[0])
 
     # verificação do enpassant(depois do turno do adversario, a peça não pode mais ser atacada por um enpassant)
     if(matriz_tabuleiro_obj[peca_movida_jog[0]][peca_movida_jog[1]] != 0):
