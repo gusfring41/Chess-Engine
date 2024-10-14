@@ -1,5 +1,5 @@
 ## Chess-Engine
-![Tabuleiro de Xadrez](tabuleiro.png)
+![Tabuleiro de Xadrez](pieces-png/tabuleiro.png)
 ## Description
 This project implements an inteligent chess engine using Python.
 Current elo rating: 0-250
