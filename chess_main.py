@@ -62,7 +62,6 @@ o jogo tem 4 estados: normal, xeque, xeque-mate, empate:
 import os
 import pygame
 import sys
-import random
 
 pygame.init()
 
