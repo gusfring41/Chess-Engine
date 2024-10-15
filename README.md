@@ -4,7 +4,7 @@
 This project implements an inteligent chess engine using Python.
 Current elo rating: 0-250
 ## How to run
-To run our project, you just need to clone this repository in your machine and install de requirements in your python environment 
+To run our project, you just need to clone this repository in your machine and install the requirements in your python environment 
 ```bash
 pip install -r requirements.txt
 ```
